@@ -54,13 +54,10 @@ fn insert(data: Json<Data>, db: State<DB>) -> &'static str {
 }
 
 #[get("/")]
-fn all(db: State<DB>) -> Json<Vec<Document>> {
-    let filter = doc! {
-        "device": "*"
-    };
+fn dump(db: State<DB>) -> Json<Vec<Document>> {
 
     let mut results = Vec::new();
-    db.get(filter, &mut results);
+    db.dump(&mut results);
 
     Json(results)
 }
@@ -69,9 +66,18 @@ fn main() {
 
     let db = DB::new("localhost", 27017, "db1", "devices");
 
+    let doc = doc! {
+        "device": "d01",
+        "sensor": "s01",
+        "rssi": -12,
+        "timestamp": "20171102190032"
+    };
+
+    db.insert(doc);
+
     rocket::ignite()
         .manage(db)
-        .mount("/", routes![all, insert])
+        .mount("/", routes![dump, insert])
         .mount("/device", routes![device])
         .launch();
 }

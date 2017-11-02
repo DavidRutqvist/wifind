@@ -22,6 +22,23 @@ impl DB {
             .expect("Failed to make insertion!");
     }
 
+    pub fn dump(&self, result: &mut Vec<Document>) {
+        let cursor = self.coll.find(None, None)
+            .ok().expect("Failed to execute find.");
+
+        for item in cursor {
+
+            match item {
+                Ok(mut doc) => {
+                    doc.remove("_id");
+                    result.push(doc);
+                },
+                Err(_) => panic!("Failed to get result from server!"),
+            }
+
+        }
+    }
+
     pub fn get(&self, filter: Document, result: &mut Vec<Document>) {
         let cursor = self.coll.find(Some(filter), None)
             .ok().expect("Failed to execute find.");
