@@ -19,11 +19,11 @@ mod db;
 use db::database::DB;
 
 #[derive(Deserialize)]
-struct Data {
+struct Payload {
     device: String,
     sensor: String,
     rssi: i32,
-    timestamp: String, // TODO: Should be changed to TimeDate type
+    timestamp: f32,
 }
 
 #[get("/<device>")]
@@ -37,7 +37,7 @@ fn device(device: String, db: State<DB>) -> Json<Vec<Document>> {
 }
 
 #[post("/insert", data = "<data>")]
-fn insert(data: Json<Data>, db: State<DB>) -> &'static str {
+fn insert(data: Json<Payload>, db: State<DB>) -> &'static str {
     // let data = match bson::to_bson(&data) { Ok(serialized) => serialized, Err(e) => return format!("Serialization error: {}", e), }};
 
     let doc = doc! {
@@ -53,7 +53,7 @@ fn insert(data: Json<Data>, db: State<DB>) -> &'static str {
 
 }
 
-#[get("/")]
+#[get("/dump")]
 fn dump(db: State<DB>) -> Json<Vec<Document>> {
 
     let mut results = Vec::new();
@@ -62,22 +62,19 @@ fn dump(db: State<DB>) -> Json<Vec<Document>> {
     Json(results)
 }
 
+#[get("/")]
+fn root() -> &'static str {
+    "This is an API"
+}
+
 fn main() {
 
     let db = DB::new("localhost", 27017, "db1", "devices");
 
-    let doc = doc! {
-        "device": "d01",
-        "sensor": "s01",
-        "rssi": -12,
-        "timestamp": "20171102190032"
-    };
-
-    db.insert(doc);
-
     rocket::ignite()
         .manage(db)
-        .mount("/", routes![dump, insert])
+        .mount("/", routes![root, dump, insert])
         .mount("/device", routes![device])
         .launch();
 }
+
