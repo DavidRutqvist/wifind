@@ -1,29 +1,36 @@
 
+use std::thread;
 use bson::Document;
 use mongodb::{Client, ThreadedClient};
 use mongodb::db::ThreadedDatabase;
-use mongodb::coll::Collection;
+
+static _DB: &'static str = "db1";
+static _COLL: &'static str = "devices";
 
 pub struct DB {
-    coll: Collection
+    cl: Client
 }
 
 impl DB {
-    pub fn new(host: &str, port: u16, _db: &str, _coll: &str) -> DB {
+    pub fn new(host: &str, port: u16) -> DB {
         let client = Client::connect(host, port)
             .expect("Failed to initialize DB");
 
-        let coll = client.db(_db).collection(_coll);
-        DB { coll: coll }
+        DB { cl: client }
     }
 
     pub fn insert(&self, doc: Document) {
-        self.coll.insert_one(doc, None)
-            .expect("Failed to make insertion!");
+        let coll = self.cl.clone().db(_DB).collection(_COLL);
+
+        thread::spawn(move || {
+            coll.insert_one(doc, None)
+                .expect("Failed to make insertion!");
+        });
     }
 
     pub fn dump(&self, result: &mut Vec<Document>) {
-        let cursor = self.coll.find(None, None)
+        let coll = self.cl.db(_DB).collection(_COLL);
+        let cursor = coll.find(None, None)
             .ok().expect("Failed to execute find.");
 
         for item in cursor {
@@ -40,7 +47,8 @@ impl DB {
     }
 
     pub fn get(&self, filter: Document, result: &mut Vec<Document>) {
-        let cursor = self.coll.find(Some(filter), None)
+        let coll = self.cl.db(_DB).collection(_COLL);
+        let cursor = coll.find(Some(filter), None)
             .ok().expect("Failed to execute find.");
 
         for item in cursor {

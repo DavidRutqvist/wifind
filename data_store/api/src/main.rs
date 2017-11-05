@@ -69,7 +69,7 @@ fn root() -> &'static str {
 
 fn main() {
 
-    let db = DB::new("localhost", 27017, "db1", "devices");
+    let db = DB::new("localhost", 27017);
 
     rocket::ignite()
         .manage(db)
