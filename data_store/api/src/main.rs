@@ -27,7 +27,7 @@ struct Payload {
 }
 
 #[get("/<device>")]
-fn device(device: String, db: State<DB>) -> Json<Vec<Document>> {
+fn get_device(device: String, db: State<DB>) -> Json<Vec<Document>> {
     let filter = doc! {"device": &device};
 
     let mut results = Vec::new();
@@ -36,8 +36,8 @@ fn device(device: String, db: State<DB>) -> Json<Vec<Document>> {
     Json(results)
 }
 
-#[post("/insert", data = "<data>")]
-fn insert(data: Json<Payload>, db: State<DB>) -> &'static str {
+#[post("/", data = "<data>")]
+fn post_device(data: Json<Payload>, db: State<DB>) -> &'static str {
     // let data = match bson::to_bson(&data) { Ok(serialized) => serialized, Err(e) => return format!("Serialization error: {}", e), }};
 
     let doc = doc! {
@@ -73,8 +73,8 @@ fn main() {
 
     rocket::ignite()
         .manage(db)
-        .mount("/", routes![root, dump, insert])
-        .mount("/device", routes![device])
+        .mount("/", routes![root, dump])
+        .mount("/device", routes![get_device, post_device])
         .launch();
 }
 
