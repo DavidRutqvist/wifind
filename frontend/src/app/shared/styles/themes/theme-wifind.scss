@@ -15,6 +15,10 @@ $theme-h-theme: mat-light-theme(
 );
 
 
+.brand-text {
+	color: #fff !important;
+}
+
 @include angular-material-theme($theme-h-theme);
 // Variables to change theme colors
 // --------------------------------------------------
