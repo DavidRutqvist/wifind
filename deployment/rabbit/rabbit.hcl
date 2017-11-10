@@ -49,7 +49,7 @@ job "rabbit" {
 
       service {
         name = "rabbit"
-
+        tags = ["amqp"]
         port = "amqp"
 
         check {
