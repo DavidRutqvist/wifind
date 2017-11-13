@@ -5,7 +5,7 @@ The WiFind project is part of the course in Pervasive Computing (M7012E) at Lule
 ## Links
 - [Webpage](http://wifind.se)
 - [Application](http://app.wifind.se:9999)
-- [Nomad UI](http://app.wifind.se:46406/ui)
+- [Nomad UI](http://app.wifind.se:4646/ui)
 - [Consul UI](http://app.wifind.se:8500/ui)
 
 ## Modules
