@@ -11,6 +11,8 @@ extern crate influx_db_client;
 extern crate rocket;
 extern crate rocket_contrib;
 
+use std::env;
+
 use rocket::State;
 use rocket_contrib::Json;
 
@@ -40,10 +42,17 @@ fn time_interval(start: u64, stop: u64, db: State<DB>) -> Json<serde_json::Value
     Json(results)
 }
 
+#[get("/<sensor_id>")]
+fn sensor(sensor_id: String, db: State<DB>) -> Json<serde_json::Value> {
+    let result = db.get_sensor(sensor_id);
+    Json(result)
+}
+
 #[get("/")]
 fn dump(db: State<DB>) -> Json<serde_json::Value> {
 
-    Json(db.dump())
+    let result = db.dump();
+    Json(result)
 }
 
 #[get("/")]
@@ -53,13 +62,16 @@ fn root() -> &'static str {
 
 fn main() {
 
-    let db = DB::new("http://localhost:8086");
+    let db_addr = env::var("DB_HOST_ADDR")
+        .expect("Database Host Address must be provided through env var!");
+    let db = DB::new(&format!("http://{}", db_addr));
 
     rocket::ignite()
         .manage(db)
         .mount("/", routes![root, post_device])
         .mount("/dump", routes![dump])
         .mount("/time", routes![time_interval])
+        .mount("/sensor", routes![sensor])
         //.mount("/device", routes![get_device, post_device])
         .launch();
 }

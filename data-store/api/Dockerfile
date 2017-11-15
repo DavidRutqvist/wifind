@@ -26,11 +26,18 @@ RUN curl https://sh.rustup.rs -sSf | \
 ENV PATH=/root/.cargo/bin:$PATH
 
 WORKDIR /srv/api
+
+RUN USER=root cargo init
+RUN rm Cargo.toml
+ADD Cargo.toml /srv/api
+RUN ls
+RUN cargo build --release
+
 ADD . /srv/api
 
 EXPOSE 8000
 
-RUN ROCKET_ENV=production cargo install
+RUN cargo build --release
 
-ENTRYPOINT api
+ENTRYPOINT cargo run --release
 

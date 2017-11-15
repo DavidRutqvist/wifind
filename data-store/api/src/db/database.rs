@@ -89,5 +89,14 @@ impl DB {
 
         json!(result)
     }
+
+    pub fn get_sensor(&self, sensor_id: String) -> serde_json::Value {
+        let result = self.query(
+            &format!("select * from pkt_txn where sensor='{}'",
+                sensor_id)
+        );
+
+        json!(result)
+    }
 }
 
