@@ -30,7 +30,7 @@ impl DB {
         let mut point = point!("pkt_txn");
         point.add_timestamp(timestamp as i64);
         point.add_tag("sensor", Value::String(sensor));
-        point.add_field("device_hash", Value::String(device_hash));
+        point.add_field("device", Value::String(device_hash));
         point.add_field("rssi", Value::Integer(rssi as i64));
 
         self.cl.write_point(point, None, None);
@@ -94,6 +94,15 @@ impl DB {
         let result = self.query(
             &format!("select * from pkt_txn where sensor='{}'",
                 sensor_id)
+        );
+
+        json!(result)
+    }
+
+    pub fn get_device(&self, device_hash: String) -> serde_json::Value {
+        let result = self.query(
+            &format!("select * from pkt_txn where device='{}'",
+                device_hash)
         );
 
         json!(result)

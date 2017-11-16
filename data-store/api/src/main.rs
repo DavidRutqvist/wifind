@@ -1,36 +1,39 @@
 #![feature(plugin, decl_macro, type_ascription)]
 #![plugin(rocket_codegen)]
 
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate serde_json;
+#[macro_use] extern crate influx_db_client;
+#[macro_use] extern crate log;
+#[macro_use] extern crate serde_derive;
+#[macro_use] extern crate serde_json;
 extern crate serde;
-#[macro_use]
-extern crate influx_db_client;
 extern crate rocket;
 extern crate rocket_contrib;
 
 use std::env;
+use std::thread;
 
 use rocket::State;
 use rocket_contrib::Json;
 
 mod db;
 use db::database::DB;
+mod consul;
+use consul::sd;
+mod rabbit;
+use rabbit::rabbitmq;
 
 #[derive(Deserialize)]
 struct Payload {
     device: String,
     sensor: String,
     rssi: i32,
-    timestamp: u64,
+    time: u64,
 }
 
 #[post("/", data = "<data>")]
 fn post_device(data: Json<Payload>, db: State<DB>) -> &'static str {
 
-    db.insert(data.device.clone(), data.sensor.clone(), data.rssi.clone(), data.timestamp.clone());
+    db.insert(data.device.clone(), data.sensor.clone(), data.rssi.clone(), data.time.clone());
     return "success"
 
 }
@@ -48,6 +51,12 @@ fn sensor(sensor_id: String, db: State<DB>) -> Json<serde_json::Value> {
     Json(result)
 }
 
+#[get("/<device_hash>")]
+fn device(device_hash: String, db: State<DB>) -> Json<serde_json::Value> {
+    let result = db.get_device(device_hash);
+    Json(result)
+}
+
 #[get("/")]
 fn dump(db: State<DB>) -> Json<serde_json::Value> {
 
@@ -62,6 +71,16 @@ fn root() -> &'static str {
 
 fn main() {
 
+    let rabbits = sd::get_services("rabbit")
+        .expect("No RabbitMQ service found! Is Consul reachable?");
+    let rabbit_addr = rabbits.first()
+        .expect("No RabbitMQ service found! Are any up and running?")
+        .to_string();
+
+    thread::spawn(move || {
+        rabbitmq::run(rabbit_addr);
+    });
+
     let db_addr = env::var("DB_HOST_ADDR")
         .expect("Database Host Address must be provided through env var!");
     let db = DB::new(&format!("http://{}", db_addr));
@@ -72,7 +91,7 @@ fn main() {
         .mount("/dump", routes![dump])
         .mount("/time", routes![time_interval])
         .mount("/sensor", routes![sensor])
-        //.mount("/device", routes![get_device, post_device])
+        .mount("/device", routes![device])
         .launch();
 }
 

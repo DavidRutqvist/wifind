@@ -4,7 +4,9 @@ docker run \
     -it \
     --rm \
     -p 8000:8000 \
-    -e "ROCKET_ADDRESS=0.0.0.0" \
     --link influxdb:database \
+    -e ROCKET_ADDRESS=0.0.0.0 \
+    -e ROCKET_ENV=dev \
+    -e DB_HOST_ADDR=http://database:8086 \
     --name wds \
-    wpt-data-store
+    wifind/datastore
