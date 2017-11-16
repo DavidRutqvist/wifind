@@ -55,17 +55,17 @@ job "datastore" {
 
       service {
         name = "datastore"
-        tags = ["datastore", "urlprefix-app.wifind.se/datastore"]
+        tags = ["datastore"]
         port = "datastore"
 
-#check {
-#name     = "HTTP Health Check"
-#type     = "http"
-#interval = "10s"
-#timeout  = "2s"
-#port     = "datastore"
-#path     = "/"
-#}
+        check {
+          name     = "HTTP Health Check"
+          type     = "http"
+          interval = "10s"
+          timeout  = "2s"
+          port     = "datastore"
+          path     = "/health"
+        }
       }
     }
 
@@ -95,20 +95,6 @@ job "datastore" {
         }
       }
 
-      service {
-        name = "influxdb"
-        tags = ["influxdb", "urlprefix-app.wifind.se/influxdb"]
-        port = "influxdb"
-
-#check {
-#name     = "HTTP Health Check"
-#type     = "http"
-#interval = "10s"
-#timeout  = "2s"
-#port     = "influxdb"
-#path     = "/"
-#}
-      }
     }
   }
 }
