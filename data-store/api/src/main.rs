@@ -56,6 +56,14 @@ fn dump(db: State<DB>) -> Json<serde_json::Value> {
 }
 
 #[get("/")]
+fn health_check(db: State<DB>) -> Result<&'static str, &'static str> {
+    match db.is_responding() {
+        true => Ok("Healthy!"),
+        false => Err("DB non responsive!")
+    }
+}
+
+#[get("/")]
 fn root() -> &'static str {
     "This is an API"
 }
@@ -69,10 +77,10 @@ fn main() {
     rocket::ignite()
         .manage(db)
         .mount("/", routes![root, post_device])
+        .mount("/health", routes![health_check])
         .mount("/dump", routes![dump])
         .mount("/time", routes![time_interval])
         .mount("/sensor", routes![sensor])
-        //.mount("/device", routes![get_device, post_device])
         .launch();
 }
 

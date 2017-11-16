@@ -36,6 +36,10 @@ impl DB {
         self.cl.write_point(point, None, None);
     }
 
+    pub fn is_responding(&self) -> bool {
+        self.cl.ping()
+    }
+
     fn flatten_series(series: &Series) -> Vec<HashMap<String, serde_json::Value>> {
 
         let mut result = Vec::new();
