@@ -7,11 +7,14 @@
 #include "freertos/FreeRTOS.h"
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
+#include "esp_wpa2.h"
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "nvs_flash.h"
 #include "driver/gpio.h"
+#include <string.h>
+#include "tcpip_adapter.h"
 
 #define	LED_GPIO_PIN			GPIO_NUM_4
 #define	WIFI_CHANNEL_MAX		(13)
@@ -37,6 +40,10 @@ static void wifi_sniffer_init(void);
 static void wifi_sniffer_set_channel(uint8_t channel);
 static const char *wifi_sniffer_packet_type2str(wifi_promiscuous_pkt_type_t type);
 static void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type);
+
+
+
+uint8_t logger_mac_addr[6];
 
 void
 app_main(void)
@@ -68,17 +75,24 @@ wifi_sniffer_init(void)
 {
 
 	nvs_flash_init();
-    	tcpip_adapter_init();
-    	ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
-    	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-	ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+	tcpip_adapter_init();
+	printf("Starting config\n");
+	ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	
+	ESP_ERROR_CHECK( esp_wifi_init(&cfg) );	
+
 	/* set country EU for channel range [1, 13] */
 	//ESP_ERROR_CHECK( esp_wifi_set_country(WIFI_COUNTRY_EU) );
 	ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
-    	ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_NULL) );
-    	ESP_ERROR_CHECK( esp_wifi_start() );
+		ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_NULL) );
+		ESP_ERROR_CHECK( esp_wifi_get_mac(WIFI_IF_STA, logger_mac_addr));
+		
 	esp_wifi_set_promiscuous(true);
 	esp_wifi_set_promiscuous_rx_cb(&wifi_sniffer_packet_handler);
+
+	ESP_ERROR_CHECK( esp_wifi_start() );
+	
 }
 
 void
@@ -109,12 +123,15 @@ wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type)
 	const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
 	const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
 
-	printf("RSSI=%02d\t"
-		"SENDER_ADDR=%02x:%02x:%02x:%02x:%02x:%02x\n",
-		ppkt->rx_ctrl.rssi,
+
+	
+	printf("%02x%02x%02x%02x%02x%02x;%0d;%02x%02x%02x%02x%02x%02x\n",	
 		hdr->addr2[0],hdr->addr2[1],hdr->addr2[2],
-		hdr->addr2[3],hdr->addr2[4],hdr->addr2[5]
-	);
+		hdr->addr2[3],hdr->addr2[4],hdr->addr2[5],	
+		ppkt->rx_ctrl.rssi,
+		logger_mac_addr[0],logger_mac_addr[1],logger_mac_addr[2],
+		logger_mac_addr[3],logger_mac_addr[4],logger_mac_addr[5]
+	);;
 }
 
 /*
