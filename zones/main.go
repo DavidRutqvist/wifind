@@ -65,7 +65,7 @@ func createInstances(mongoAddress string, consulAddress string) *Instances {
 	failOnError(err, "Failed to connect to Consul\n")
 	instances.Consul = consul
 
-	fmt.Printf("Retrieving RabbitMQ service")
+	fmt.Printf("Retrieving RabbitMQ service\n")
 	catalog := consul.Catalog()
 	services, _, err := catalog.Service("rabbit", "", nil)
 	failOnError(err, "Failed to retrive RabbitMQ from Consul\n")
@@ -102,12 +102,13 @@ func main() {
 	mux.HandleFunc(pat.Get("/zones/:zoneid"), zoneByZoneID(instances))
 	
 	fmt.Printf("Starting Router\n")
-    http.ListenAndServe("localhost:8080", mux)
+    http.ListenAndServe("0.0.0.0:8080", mux)
 }
 
 func allZones(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
     return func(w http.ResponseWriter, r *http.Request) {
 		requestDump, err := httputil.DumpRequest(r, false)
+		fmt.Println(string(requestDump))
 		failOnError(err, string(requestDump))
 		
 		buffer := new(bytes.Buffer)
@@ -141,6 +142,7 @@ func allZones(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 func addZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
     return func(w http.ResponseWriter, r *http.Request) {
 		requestDump, err := httputil.DumpRequest(r, false)
+		fmt.Println(string(requestDump))
 		failOnError(err, string(requestDump))
 
         session := i.Session.Copy()
@@ -191,6 +193,7 @@ func addZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 func zoneByZoneID(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
     return func(w http.ResponseWriter, r *http.Request) {
 		requestDump, err := httputil.DumpRequest(r, false)
+		fmt.Println(string(requestDump))
 		failOnError(err, string(requestDump))
 
         session := i.Session.Copy()
@@ -234,6 +237,7 @@ func zoneByZoneID(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 func updateZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
     return func(w http.ResponseWriter, r *http.Request) {
 		requestDump, err := httputil.DumpRequest(r, false)
+		fmt.Println(string(requestDump))
 		failOnError(err, string(requestDump))
 
         session := i.Session.Copy()
