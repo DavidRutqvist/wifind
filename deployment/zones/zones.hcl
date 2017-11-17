@@ -6,7 +6,7 @@ job "zones" {
     max_parallel = 1
   }
 
-  group "database" {
+  group "zones" {
     count = 1
     restart {
       attempts = 10
@@ -40,24 +40,12 @@ job "zones" {
         }
       }
     }
-  }
-
-/*
-  group "service" {
-    count = 1
-
-    restart {
-      attempts = 10
-      interval = "5m"
-      delay    = "25s"
-      mode     = "delay"
-    }
 
     task "service" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/zones:1.0.0"
+        image = "docker.adventic.se/wifind/zones:0.1.2"
 
         port_map {
           http = 8080
@@ -69,6 +57,11 @@ job "zones" {
               password = "nomad"
               server_address = "docker.adventic.se"
         }
+      }
+
+      env {
+        "MONGO_ADDRESS" = "${NOMAD_ADDR_mongo_mongo}"
+        "CONSUL_ADDRESS" = "${attr.unique.network.ip-address}:8500"
       }
 
       resources {
@@ -97,5 +90,5 @@ job "zones" {
         }
       }
     }
-  }*/
+  }
 }
