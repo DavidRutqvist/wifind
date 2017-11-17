@@ -93,16 +93,32 @@ func main() {
 	mongoAddress := os.Getenv("MONGO_ADDRESS")
 	consulAddress := os.Getenv("CONSUL_ADDRESS")
 
+	//instances := createInstances(mongoAddress, "srv.wifind.se:8500")
 	instances := createInstances(mongoAddress, consulAddress)
 
 	mux := goji.NewMux()
-	mux.HandleFunc(pat.Get("/zones/"), allZones(instances))
-	mux.HandleFunc(pat.Post("/zones/"), addZone(instances))
+	mux.HandleFunc(pat.Get("/zones"), allZones(instances))
+	mux.HandleFunc(pat.Post("/zones"), addZone(instances))
 	mux.HandleFunc(pat.Put("/zones/:zoneid"), updateZone(instances))
 	mux.HandleFunc(pat.Get("/zones/:zoneid"), zoneByZoneID(instances))
-	
+	mux.HandleFunc(pat.Get("/"), healthCheck(instances))
 	fmt.Printf("Starting Router\n")
     http.ListenAndServe("0.0.0.0:8080", mux)
+}
+
+func healthCheck(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
+    return func(w http.ResponseWriter, r *http.Request) {
+		requestDump, err := httputil.DumpRequest(r, false)
+		fmt.Println(string(requestDump))
+		failOnError(err, string(requestDump))
+		
+		buffer := new(bytes.Buffer)
+
+		response := PostRes{Success: "true", Message: "I am alive"}
+		json.NewEncoder(buffer).Encode(response)
+		respBody := buffer.Bytes()
+		ResponseWithJSON(w, respBody, http.StatusOK)
+	}
 }
 
 func allZones(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
@@ -120,7 +136,7 @@ func allZones(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 
         c := session.DB("store").C("zones")
 
-        var zones []Zone
+        zones := make([]Zone, 0)
         err = c.Find(bson.M{}).All(&zones)
         if err != nil {
 			response = PostRes{Success: "false", Message: "Database error"}
@@ -129,12 +145,12 @@ func allZones(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
             return
         }
-
-        respBody, err = json.MarshalIndent(zones, "", "  ")
-        if err != nil {
-            log.Fatal(err)
-        }
-
+		
+		respBody, err = json.MarshalIndent(zones, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+        
         ResponseWithJSON(w, respBody, http.StatusOK)
     }
 }
@@ -182,7 +198,7 @@ func addZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//TOTO create and send ZONE_CREATED EVENT to rabbit exchange
+		//TODO create and send ZONE_CREATED EVENT to rabbit exchange
 		response = PostRes{Success: "true", Message: "Zone created"}
 		json.NewEncoder(buffer).Encode(response)
 		respBody = buffer.Bytes()
@@ -281,7 +297,7 @@ func updateZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
                 return
             }
         }
-		//TOTO create and send ZONE_UPDATED EVENT to rabbit exchange
+		//TODO create and send ZONE_UPDATED EVENT to rabbit exchange
 		response = PostRes{Success: "true", Message: "Zone updated"}
 		json.NewEncoder(buffer).Encode(response)
 		respBody = buffer.Bytes()
