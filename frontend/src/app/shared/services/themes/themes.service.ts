@@ -8,12 +8,13 @@ const themeE = require('../../styles/themes/theme-e.scss');
 const themeF = require('../../styles/themes/theme-f.scss');
 const themeG = require('../../styles/themes/theme-g.scss');
 const themeH = require('../../styles/themes/theme-h.scss');
+const themeWifind = require('../../styles/themes/theme-wifind.scss');
 
 @Injectable()
 export class ThemesService {
 
     styleTag: any;
-    defaultTheme: string = 'A';
+    defaultTheme: string = 'WIFIND';
 
     constructor() {
         this.createStyle();
@@ -54,6 +55,9 @@ export class ThemesService {
                 break;
             case 'H':
                 this.injectStylesheet(themeH);
+                break;
+            case 'WIFIND':
+                this.injectStylesheet(themeWifind);
                 break;
         }
     }
