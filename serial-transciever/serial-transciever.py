@@ -66,7 +66,7 @@ def main(args):
                 lookupTable[deviceID] = timestamp
                 send = True
             if(send):
-                body = "{\"device\":" + deviceID + ",\"sensor\":" + sensorID + ",\"rssi\":" + rssi + ",\"timestamp\":" + str(timestamp) + "}"
+                body = "{\"device\":\"" + deviceID + "\",\"sensor\":\"" + sensorID + "\",\"rssi\":" + rssi + ",\"time\":" + str(timestamp) + "}"
                 print body
                 print ("Unique entries: " + str(len(lookupTable.keys())))
                 channel.basic_publish(exchange='',

@@ -98,6 +98,24 @@ done
 echo "Installing autocomplete..."
 nomad -autocomplete-install
 
+echo "Installing GlusterFS"
+sudo yum install centos-release-gluster -y
+sudo yum --enablerepo=centos-gluster*-test install glusterfs-server -y
+sudo systemctl enable glusterd
+sudo systemctl start glusterd
+
+echo "Setting up volume"
+# using root partition is not recommended but we can use it for the development environemnt
+sudo mkdir /usr/local/share/bricks/brick1/gv0 -p
+sudo gluster volume create gv0 nomad:/usr/local/share/bricks/brick1/gv0 force
+sudo gluster volume start gv0
+
+echo "Mounting volume"
+sudo mount -t glusterfs nomad:/gv0 /mnt
+
+echo "Adding automatic mount to fstab"
+echo -e "nomad:/gv0 /mnt glusterfs defaults,_netdev 0 0" | sudo tee -a /etc/fstab
+
 SCRIPT
 
 Vagrant.configure(2) do |config|
