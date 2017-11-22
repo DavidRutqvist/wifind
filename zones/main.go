@@ -30,7 +30,7 @@ func failOnError(err error, msg string) {
 }
 
 type PostRes struct {
-	Success string `json:"success"`
+	Success bool `json:"success"`
 	Message string `json:"message"`
 }
 
@@ -114,7 +114,7 @@ func healthCheck(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 		
 		buffer := new(bytes.Buffer)
 
-		response := PostRes{Success: "true", Message: "I am alive"}
+		response := PostRes{Success: true, Message: "I am alive"}
 		json.NewEncoder(buffer).Encode(response)
 		respBody := buffer.Bytes()
 		ResponseWithJSON(w, respBody, http.StatusOK)
@@ -139,7 +139,7 @@ func allZones(i *Instances) func(w http.ResponseWriter, r *http.Request) {
         zones := make([]Zone, 0)
         err = c.Find(bson.M{}).All(&zones)
         if err != nil {
-			response = PostRes{Success: "false", Message: "Database error"}
+			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
 			respBody := buffer.Bytes()
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
@@ -172,7 +172,7 @@ func addZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
         decoder := json.NewDecoder(r.Body)
         err = decoder.Decode(&zone)
         if err != nil {
-			response = PostRes{Success: "false", Message: "Incorrect body"}
+			response = PostRes{Success: false, Message: "Incorrect body"}
 			json.NewEncoder(buffer).Encode(response)
 			respBody := buffer.Bytes()
 			ResponseWithJSON(w, respBody, http.StatusBadRequest)
@@ -184,14 +184,14 @@ func addZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
         err = c.Insert(zone)
         if err != nil {
             if mgo.IsDup(err) {
-				response = PostRes{Success: "false", Message: "Zone with this ID already exists"}
+				response = PostRes{Success: false, Message: "Zone with this ID already exists"}
 				json.NewEncoder(buffer).Encode(response)
 				respBody := buffer.Bytes()
 				ResponseWithJSON(w, respBody, http.StatusBadRequest)
 				return
 			}
 			panic(err)
-			response = PostRes{Success: "false", Message: "Database error"}
+			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
 			respBody := buffer.Bytes()
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
@@ -199,7 +199,7 @@ func addZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		//TODO create and send ZONE_CREATED EVENT to rabbit exchange
-		response = PostRes{Success: "true", Message: "Zone created"}
+		response = PostRes{Success: true, Message: "Zone created"}
 		json.NewEncoder(buffer).Encode(response)
 		respBody = buffer.Bytes()
 		ResponseWithJSON(w, respBody, http.StatusCreated)
@@ -226,7 +226,7 @@ func zoneByZoneID(i *Instances) func(w http.ResponseWriter, r *http.Request) {
         var zone Zone
         err = c.Find(bson.M{"_id": zoneid}).One(&zone)
         if err != nil {
-			response = PostRes{Success: "false", Message: "Database error"}
+			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
 			respBody := buffer.Bytes()
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
@@ -234,7 +234,7 @@ func zoneByZoneID(i *Instances) func(w http.ResponseWriter, r *http.Request) {
         }
 		
         if zone.Id == "" {
-			response = PostRes{Success: "false", Message: "Zone not found"}
+			response = PostRes{Success: false, Message: "Zone not found"}
 			json.NewEncoder(buffer).Encode(response)
 			respBody := buffer.Bytes()
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
@@ -269,7 +269,7 @@ func updateZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
         decoder := json.NewDecoder(r.Body)
         err = decoder.Decode(&zone)
         if err != nil {
-            response = PostRes{Success: "false", Message: "Incorrect body"}
+            response = PostRes{Success: false, Message: "Incorrect body"}
 			json.NewEncoder(buffer).Encode(response)
 			respBody := buffer.Bytes()
 			ResponseWithJSON(w, respBody, http.StatusBadRequest)
@@ -284,13 +284,13 @@ func updateZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
             switch err {
 			default:
 				panic(err)
-				response = PostRes{Success: "false", Message: "Database error"}
+				response = PostRes{Success: false, Message: "Database error"}
 				json.NewEncoder(buffer).Encode(response)
 				respBody := buffer.Bytes()
 				ResponseWithJSON(w, respBody, http.StatusInternalServerError)
                 return
             case mgo.ErrNotFound:
-				response = PostRes{Success: "false", Message: "Zone not found"}
+				response = PostRes{Success: false, Message: "Zone not found"}
 				json.NewEncoder(buffer).Encode(response)
 				respBody := buffer.Bytes()
 				ResponseWithJSON(w, respBody, http.StatusInternalServerError)
@@ -298,10 +298,9 @@ func updateZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
             }
         }
 		//TODO create and send ZONE_UPDATED EVENT to rabbit exchange
-		response = PostRes{Success: "true", Message: "Zone updated"}
+		response = PostRes{Success: true, Message: "Zone updated"}
 		json.NewEncoder(buffer).Encode(response)
 		respBody = buffer.Bytes()
 		ResponseWithJSON(w, respBody, http.StatusOK)
     }
 }
-
