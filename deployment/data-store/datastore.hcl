@@ -55,7 +55,7 @@ job "datastore" {
 
       service {
         name = "datastore"
-        tags = ["datastore"]
+        tags = ["http"]
         port = "datastore"
 
         check {
