@@ -1,5 +1,5 @@
 
-use influx_db_client::{Client, Point, Value, Series};
+use influx_db_client::{Client, Point, Value, Series, Precision};
 use serde_json;
 
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ impl DB {
     pub fn new(host: &str) -> DB {
         let mut client = Client::new(host, _DB);
 
-        client.create_database(_DB);
+        client.create_database(_DB).unwrap();
         client.swith_database(_DB);
 
         DB { cl: client }
@@ -33,7 +33,7 @@ impl DB {
         point.add_field("device", Value::String(device_hash));
         point.add_field("rssi", Value::Integer(rssi as i64));
 
-        self.cl.write_point(point, None, None);
+        self.cl.write_point(point, Some(Precision::Seconds), None);
     }
 
     fn flatten_series(series: &Series) -> Vec<HashMap<String, serde_json::Value>> {
@@ -56,14 +56,14 @@ impl DB {
 
     fn query(&self, q: &str) -> Vec<HashMap<String, serde_json::Value>> {
 
-        let found = match self.cl.query(q, None) {
+        let found = match self.cl.query(q, Some(Precision::Seconds)) {
             Ok(Some(found)) => found,
             _ => Vec::new()
         };
 
         let flattened = found
             .into_iter()
-            .flat_map(|find| find.series.unwrap())
+            .flat_map(|find| find.series.unwrap_or(Vec::new()))
             .collect::<Vec<_>>();
 
         let result = flattened

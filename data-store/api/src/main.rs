@@ -71,11 +71,8 @@ fn root() -> &'static str {
 
 fn main() {
 
-    let rabbits = sd::get_services("rabbit")
+    let rabbit_addr = sd::get_node_address("rabbit")
         .expect("No RabbitMQ service found! Is Consul reachable?");
-    let rabbit_addr = rabbits.first()
-        .expect("No RabbitMQ service found! Are any up and running?")
-        .to_string();
 
     thread::spawn(move || {
         rabbitmq::run(rabbit_addr);

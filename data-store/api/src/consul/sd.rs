@@ -1,19 +1,21 @@
 
 extern crate consul;
+extern crate pretty_env_logger;
 
 use self::consul::Client;
-use std::collections::HashMap;
 use std::env;
 
-pub fn get_services(name: &str) -> Option<Vec<String>> {
+pub fn get_node_address(name: &str) -> Option<String> {
+
     let server = env::var("CONSUL_ADDR")
         .unwrap_or("130.240.5.73:8500".to_string());
 
+    println!("Fetching {} from Consul at http://{}", name, server);
     let client = Client::new(&format!("http://{}", server));
-    let services: HashMap<String, Vec<String>> = client.catalog.services().unwrap();
+    let nodes = client.catalog.get_nodes(name.to_string()).unwrap();
 
-    match services.get(name) {
-        Some(vec) => Some(vec.iter().map(|v| v.clone()).collect::<Vec<_>>()),
+    match nodes.first() {
+        Some(node) => Some(format!("{}:{}", node.Address, node.ServicePort)),
         None => None
     }
 }
