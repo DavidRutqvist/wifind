@@ -62,6 +62,7 @@ job "zones" {
       env {
         "MONGO_ADDRESS" = "${NOMAD_ADDR_mongo_mongo}"
         "CONSUL_ADDRESS" = "${attr.unique.network.ip-address}:8500"
+        "EXCHANGE_TOPIC" = "event"
       }
 
       resources {

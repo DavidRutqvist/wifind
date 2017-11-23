@@ -24,7 +24,7 @@ func ResponseWithJSON(w http.ResponseWriter, json []byte, code int) {
 
 func failOnError(err error, msg string) {
 	if err != nil {
-		fmt.Printf(msg)
+		fmt.Println(msg)
 	  	panic(err)
 	}
 }
@@ -47,9 +47,11 @@ type Instances struct {
 	Consul *api.Client
 	RabbitConn *amqp.Connection
 	RabbitChan *amqp.Channel
+	ExchangeTopic string
+	RabbitEndpoint string
 }
 
-func createInstances(mongoAddress string, consulAddress string) *Instances {
+func createInstances(mongoAddress string, consulAddress string, exchangedTopic string) *Instances {
 	var instances *Instances = new(Instances)
 
 	fmt.Printf("Connecting to MongoDB at: %v\n", mongoAddress)
@@ -74,6 +76,7 @@ func createInstances(mongoAddress string, consulAddress string) *Instances {
 	rabbitAddress := service.Address
 	rabbitPort := service.ServicePort
 	rabbitEndpoint := fmt.Sprintf("amqp://" + rabbitAddress)
+	instances.RabbitEndpoint = rabbitEndpoint
 	fmt.Printf("Connecting to RabbitMQ at: %v:%v\n", rabbitAddress, rabbitPort)
 	connection, err := amqp.Dial(rabbitEndpoint)
 	failOnError(err, "Failed to connect to RabbitMQ\n")
@@ -84,17 +87,18 @@ func createInstances(mongoAddress string, consulAddress string) *Instances {
 
 	instances.RabbitConn = connection
 	instances.RabbitChan = channel
+	instances.ExchangeTopic = exchangedTopic
 
-	
 	return instances
 }
 
 func main() {
 	mongoAddress := os.Getenv("MONGO_ADDRESS")
 	consulAddress := os.Getenv("CONSUL_ADDRESS")
+	exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
 
-	//instances := createInstances(mongoAddress, "srv.wifind.se:8500")
-	instances := createInstances(mongoAddress, consulAddress)
+	//instances := createInstances(mongoAddress, "srv.wifind.se:8500", "event")
+	instances := createInstances(mongoAddress, consulAddress, exchangedTopic)
 
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/zones"), allZones(instances))
@@ -197,8 +201,14 @@ func addZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
 			return
 		}
+		
+		json.NewEncoder(buffer).Encode(zone)
+		body := buffer.Bytes()
+		topic := "zones." + zone.Id.Hex() + ".new"
 
-		//TODO create and send ZONE_CREATED EVENT to rabbit exchange
+		fmt.Printf("Publishing ZONE_CREATED event to %v\n", topic)
+		i.PublishEvent(topic, body)
+
 		response = PostRes{Success: true, Message: "Zone created"}
 		json.NewEncoder(buffer).Encode(response)
 		respBody = buffer.Bytes()
@@ -297,10 +307,50 @@ func updateZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
                 return
             }
         }
-		//TODO create and send ZONE_UPDATED EVENT to rabbit exchange
+		
+		err = c.Find(bson.M{"_id": zoneid}).One(&zone)
+		json.NewEncoder(buffer).Encode(zone)
+		body := buffer.Bytes()
+		topic := "zones." + zone.Id.Hex() + ".updated"
+		
+		fmt.Printf("Publishing ZONE_UPDATED event to %v\n", topic)
+		i.PublishEvent(topic, body)
+
 		response = PostRes{Success: true, Message: "Zone updated"}
 		json.NewEncoder(buffer).Encode(response)
 		respBody = buffer.Bytes()
 		ResponseWithJSON(w, respBody, http.StatusOK)
     }
+}
+
+func (i *Instances) PublishEvent(topic string, body []byte) {
+	connection, err := amqp.Dial(i.RabbitEndpoint)
+	failOnError(err, "Failed to open a connection\n")
+	defer connection.Close()
+
+	channel, err := connection.Channel()
+	failOnError(err, "Failed to open a channel\n")
+	defer channel.Close()
+
+	err = channel.ExchangeDeclare(
+		i.ExchangeTopic, 	// name
+		"topic",			// topic
+		false,				// durable
+		false,				// auto-deleted
+		false,				// internal
+		false,				// no-wait
+		nil,				// arguments
+	)
+	failOnError(err, "Failed to declare an exchange.")
+
+	err = channel.Publish(
+		i.ExchangeTopic,	// exchange
+		topic,				// topic
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:	"text/plain",
+			Body:			body,
+	})
+	failOnError(err, "Failed to publish event.")
 }
