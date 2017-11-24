@@ -7,6 +7,6 @@ docker run \
     --link influxdb:database \
     -e ROCKET_ADDRESS=0.0.0.0 \
     -e ROCKET_ENV=dev \
-    -e DB_HOST_ADDR=http://database:8086 \
+    -e DB_HOST_ADDR=database:8086 \
     --name wds \
     wifind/datastore

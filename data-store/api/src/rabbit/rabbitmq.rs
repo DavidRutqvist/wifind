@@ -4,7 +4,7 @@ extern crate tokio_core;
 extern crate pretty_env_logger;
 extern crate serde_json;
 
-use std::{io, thread, env};
+use std::{thread, env};
 use std::sync::{Arc, mpsc};
 use std::sync::mpsc::Receiver;
 use self::futures::future::Future;
@@ -18,7 +18,6 @@ use self::lapin::channel::{
     BasicPublishOptions,
     BasicConsumeOptions,
     ExchangeDeclareOptions,
-    QueueBindOptions,
     QueueDeclareOptions};
 
 use db::database::DB;
@@ -33,7 +32,6 @@ struct Payload {
 
 fn event_exchange(rx: Receiver<(Payload, String)>, rabbit_host: String) {
     let exchange_name = "event";
-    let queue_name = "event_queue";
 
     // create the reactor
     let mut core = Core::new().unwrap();
@@ -49,42 +47,41 @@ fn event_exchange(rx: Receiver<(Payload, String)>, rabbit_host: String) {
             lapin::client::Client::connect(stream, &ConnectionOptions::default())
         }).and_then(|(client, _)| {
 
+            // create channel to rabbit
             client.create_channel().and_then(move |channel| {
-                channel.queue_declare(queue_name, &QueueDeclareOptions::default(), &FieldTable::new()).and_then(move |_| {
-                    channel.exchange_declare(exchange_name, "topic", &ExchangeDeclareOptions::default(), &FieldTable::new()).and_then(move |_| {
-                        let extract_routing_key = |payload: Payload| {
-                            format!(
-                                "sensor.{}.detected.{}",
-                                payload.sensor.clone(),
-                                payload.device.clone())
-                        };
+                // declare topic exchange
+                channel.exchange_declare(exchange_name, "topic", &ExchangeDeclareOptions::default(), &FieldTable::new()).and_then(move |_| {
 
+                    // extract and construct routing key from JSON payload
+                    let extract_routing_key = |payload: Payload| {
+                        format!(
+                            "sensor.{}.detected.{}",
+                            payload.sensor.clone(),
+                            payload.device.clone())
+                    };
 
-                        loop {
-                            info!("Waiting for event...");
-                            let (json, data) = rx.recv()
-                                .expect("channel message failed");
+                    loop {
 
-                            let ch = channel.clone();
-                            let routing_key = extract_routing_key(json);
+                        debug!("Waiting for event...");
+                        let (json, data) = rx.recv()
+                            .expect("channel message failed");
 
-                            channel.queue_bind(queue_name, exchange_name, &routing_key, &QueueBindOptions::default(), &FieldTable::new()).and_then(move |_| {
+                        let ch = channel.clone();
+                        let routing_key = extract_routing_key(json);
 
-                                ch.basic_publish(
-                                    exchange_name,
-                                    &routing_key,
-                                    data.as_bytes(),
-                                    &BasicPublishOptions::default(),
-                                    BasicProperties::default()
-                                )//.wait()
-                                 //.unwrap();
+                        // publish to event exchange
+                        ch.basic_publish(
+                            exchange_name,
+                            &routing_key,
+                            data.as_bytes(),
+                            &BasicPublishOptions::default(),
+                            BasicProperties::default()
+                        ).wait()
+                         .unwrap();
 
-                            }).wait()
-                              .unwrap();
-                        }
+                    }
+                    Ok(())
 
-                        Ok(())
-                    })
                 })
             })
         })

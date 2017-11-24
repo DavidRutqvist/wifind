@@ -27,17 +27,17 @@ ENV PATH=/root/.cargo/bin:$PATH
 
 WORKDIR /srv/api
 
-RUN USER=root cargo init
+RUN USER=root cargo init --bin
 RUN rm Cargo.toml
 ADD Cargo.toml /srv/api
-RUN ls
 RUN cargo build --release
+RUN rm -rf target/ src/main.rs Cargo.lock
 
-ADD . /srv/api
+ADD src/ /srv/api/src
+ADD Cargo.toml /srv/api
 
 EXPOSE 8000
 
 RUN cargo build --release
 
 ENTRYPOINT cargo run --release
-
