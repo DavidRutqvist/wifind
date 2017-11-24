@@ -1,5 +1,5 @@
 provider "nomad" {
-  address = "localhost"
+  address = "localhost:4646"
 }
 
 # Register a job
