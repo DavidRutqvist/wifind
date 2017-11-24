@@ -1,0 +1,61 @@
+<nav role="navigation" class="navbar">
+	<ul class="navbar-nav nav-logo">
+		<li class="nav-item logo-wrapper">
+			<a href="javascript:void(0)" [routerLink]="['/dashboards']">
+				<div class="logo">
+					<img src="assets/img/logo/wifind-icon.png" alt="Logo">
+				</div>
+				<h1 class="brand-text">WiFind</h1>
+			</a>
+		</li>
+	</ul>
+	<ul class="navbar-nav nav-left">
+		<li class="nav-item menu-icon">
+			<a md-ripple href="javascript:void(0)" role="button" (click)="toggleMenuSideabar()" class="nav-link menu-trigger">
+				<i class="mdi mdi-backburger"></i>
+			</a>
+		</li>
+		<li class="nav-item hidden-sm">
+			<a md-ripple href="javascript:void(0)" (click)="toggleAppMobileLeftMenuSidebar()" class="nav-link mobile-menu-trigger">
+				<i class="mdi mdi-backburger"></i>
+			</a>
+		</li>
+		<!--<li class="nav-item hidden-sm-down">
+			<a md-ripple href="javascript:void(0)" (click)="toggleProfile()" class="nav-link">
+				<i class="zmdi zmdi-account"></i>
+			</a>
+		</li>-->
+		<li class="nav-item dropdown dropdown-lg app_menu_launcher hidden-sm-down" ngbDropdown>
+			<a md-ripple href="javascript:void(0)" class="nav-link" ngbDropdownToggle>
+				<i class="zmdi zmdi-apps"></i>
+			</a>
+			<ul class="dropdown-menu dropdown-lg-menu  p-15 min-h-200">
+				<li>
+
+				</li>
+			</ul>
+		</li>
+		<li class="nav-item dropdown mega hidden-sm-down" ngbDropdown>
+			<a md-ripple href="javascript:void(0)" class="nav-link" ngbDropdownToggle>
+				<span>Mega</span>
+				<span class="caret"></span>
+			</a>
+			<div class="dropdown-menu dropdown-menu full-width p-15 min-h-200">
+
+			</div>
+		</li>
+	</ul>
+	<ul class="navbar-nav nav-right">
+		<li class="nav-item">
+			<a md-ripple href="javascript:void(0)" (click)="search.searchStatus = true" class="nav-link">
+				<i class="zmdi zmdi-search"></i>
+			</a>
+		</li>
+		<li class="nav-item">
+			<a md-ripple href="javascript:void(0)" (click)="toggleAppRightSidebar()" class="nav-link">
+				<i [ngClass]="{'mdi-playlist-minus': false, 'mdi-playlist-plus': true}" class="mdi"></i>
+			</a>
+		</li>
+	</ul>
+</nav>
+<topbar-search #search></topbar-search>

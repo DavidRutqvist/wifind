@@ -1,0 +1,157 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+$script = <<SCRIPT
+# Update yum and get dependencies
+sudo yum update
+sudo yum install -y unzip curl \
+  yum-utils \
+  device-mapper-persistent-data \
+  lvm2
+
+# Download Nomad
+NOMAD_VERSION=0.7.0
+
+echo "Fetching Nomad..."
+cd /tmp/
+curl -sSL https://releases.hashicorp.com/nomad/${NOMAD_VERSION}/nomad_${NOMAD_VERSION}_linux_amd64.zip -o nomad.zip
+
+echo "Fetching Consul..."
+curl -sSL https://releases.hashicorp.com/consul/1.0.0/consul_1.0.0_linux_amd64.zip > consul.zip
+
+echo "Installing Nomad..."
+unzip nomad.zip
+sudo install nomad /usr/bin/nomad
+(
+  cat <<-EOF
+  [Unit]
+  Description=nomad agent
+  Requires=network-online.target
+  After=network-online.target
+  
+  [Service]
+  Restart=on-failure
+  ExecStart=/usr/bin/nomad agent -config /etc/nomad.d/server.hcl
+  ExecReload=/bin/kill -HUP $MAINPID
+  
+  [Install]
+  WantedBy=multi-user.target
+EOF
+) | sudo tee /etc/systemd/system/nomad.service
+
+sudo mkdir -p /etc/nomad.d
+sudo chmod a+w /etc/nomad.d
+
+sudo mv ~/server.hcl /etc/nomad.d/server.hcl
+
+sudo systemctl enable nomad.service
+sudo systemctl start nomad
+
+# Set hostname's IP to made advertisement Just Work
+#sudo sed -i -e "s/.*nomad.*/$(ip route get 1 | awk '{print $NF;exit}') nomad/" /etc/hosts
+
+echo "Installing Docker..."
+
+sudo yum-config-manager \
+  --add-repo \
+  https://download.docker.com/linux/centos/docker-ce.repo
+
+sudo yum install docker-ce -y
+
+sudo systemctl enable docker
+
+# Restart docker to make sure we get the latest version of the daemon if there is an upgrade
+sudo service restart docker
+
+# Make sure we can actually use docker as the vagrant user
+sudo usermod -aG docker vagrant
+
+echo "Installing Consul..."
+unzip /tmp/consul.zip
+sudo install consul /usr/bin/consul
+(
+cat <<-EOF
+	[Unit]
+	Description=consul agent
+	Requires=network-online.target
+	After=network-online.target
+	
+	[Service]
+	Restart=on-failure
+	ExecStart=/usr/bin/consul agent -dev -client 0.0.0.0
+	ExecReload=/bin/kill -HUP $MAINPID
+	
+	[Install]
+	WantedBy=multi-user.target
+EOF
+) | sudo tee /etc/systemd/system/consul.service
+sudo systemctl enable consul.service
+sudo systemctl start consul
+
+for bin in cfssl cfssl-certinfo cfssljson
+do
+	echo "Installing $bin..."
+	curl -sSL https://pkg.cfssl.org/R1.2/${bin}_linux-amd64 > /tmp/${bin}
+	sudo install /tmp/${bin} /usr/local/bin/${bin}
+done
+
+echo "Installing autocomplete..."
+nomad -autocomplete-install
+
+echo "Installing GlusterFS"
+sudo yum install centos-release-gluster -y
+sudo yum --enablerepo=centos-gluster*-test install glusterfs-server -y
+sudo systemctl enable glusterd
+sudo systemctl start glusterd
+
+echo "Setting up volume"
+# using root partition is not recommended but we can use it for the development environemnt
+sudo mkdir /usr/local/share/bricks/brick1/gv0 -p
+sudo gluster volume create gv0 nomad:/usr/local/share/bricks/brick1/gv0 force
+sudo gluster volume start gv0
+
+echo "Mounting volume"
+sudo mount -t glusterfs nomad:/gv0 /mnt
+
+echo "Adding automatic mount to fstab"
+echo -e "nomad:/gv0 /mnt glusterfs defaults,_netdev 0 0" | sudo tee -a /etc/fstab
+
+SCRIPT
+
+Vagrant.configure(2) do |config|
+  config.vm.box = "centos/7" # CentOS 7 Minimal
+  config.vm.hostname = "nomad"
+  config.vm.provision "file", source: "./server.hcl", destination: "~/server.hcl"
+  config.vm.provision "shell", inline: $script, privileged: false
+  config.vm.provision "docker" # Just install it
+  
+  # Expose the nomad api and ui to the host
+  config.vm.network "forwarded_port", guest: 4646, host: 4646,
+    auto_correct: true
+  
+  # Expose the consul api and ui to the host
+  config.vm.network "forwarded_port", guest: 8500, host: 8500,
+    auto_correct: true
+
+  # Increase memory for Parallels Desktop
+  config.vm.provider "parallels" do |p, o|
+    p.memory = "1024"
+  end
+
+  # Increase memory for Virtualbox
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "1024"
+  end
+
+  # Increase memory for Hyper-V
+  config.vm.provider "hyperv" do |h|
+    h.memory = "1024"
+  end
+
+  # Increase memory for VMware
+  ["vmware_fusion", "vmware_workstation"].each do |p|
+    config.vm.provider p do |v|
+      v.vmx["memsize"] = "1024"
+    end
+  end
+end
