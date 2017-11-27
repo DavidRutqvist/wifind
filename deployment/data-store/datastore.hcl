@@ -21,7 +21,7 @@ job "datastore" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/datastore:1.1"
+        image = "docker.adventic.se/wifind/datastore:1.2"
 
         ssl = true
         auth {
@@ -49,13 +49,11 @@ job "datastore" {
       env {
         "DB_HOST_ADDR" = "${NOMAD_ADDR_influxdb_influxdb}"
         "ROCKET_ENV" = "production"
-        #"DB_USER" = "web"
-        #"DB_PASS" = "loremipsum"
       }
 
       service {
         name = "datastore"
-        tags = ["datastore"]
+        tags = ["http"]
         port = "datastore"
 
         check {
