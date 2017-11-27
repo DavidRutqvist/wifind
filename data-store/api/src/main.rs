@@ -74,9 +74,9 @@ fn main() {
     let rabbit_addr = sd::get_node_address("rabbit")
         .expect("No RabbitMQ service found! Is Consul reachable?");
 
-    thread::spawn(move || {
+    thread::Builder::new().name("rabbit thread".to_string()).spawn(move || {
         rabbitmq::run(rabbit_addr);
-    });
+    }).unwrap();
 
     let db_addr = env::var("DB_HOST_ADDR")
         .expect("Database Host Address must be provided through env var!");

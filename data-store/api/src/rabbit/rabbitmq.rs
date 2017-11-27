@@ -47,10 +47,15 @@ fn event_exchange(rx: Receiver<(Payload, String)>, rabbit_host: String) {
             lapin::client::Client::connect(stream, &ConnectionOptions::default())
         }).and_then(|(client, _)| {
 
+            debug!("Exch connected!");
             // create channel to rabbit
             client.create_channel().and_then(move |channel| {
+                // Set Exchange options
+                let mut exch_options = ExchangeDeclareOptions::default();
+                exch_options.durable = true;
+
                 // declare topic exchange
-                channel.exchange_declare(exchange_name, "topic", &ExchangeDeclareOptions::default(), &FieldTable::new()).and_then(move |_| {
+                channel.exchange_declare(exchange_name, "topic", &exch_options, &FieldTable::new()).and_then(move |_| {
 
                     // extract and construct routing key from JSON payload
                     let extract_routing_key = |payload: Payload| {
@@ -59,7 +64,6 @@ fn event_exchange(rx: Receiver<(Payload, String)>, rabbit_host: String) {
                             payload.sensor.clone(),
                             payload.device.clone())
                     };
-
                     loop {
 
                         debug!("Waiting for event...");
@@ -77,7 +81,7 @@ fn event_exchange(rx: Receiver<(Payload, String)>, rabbit_host: String) {
                             &BasicPublishOptions::default(),
                             BasicProperties::default()
                         ).wait()
-                         .unwrap();
+                         .expect("Couldn't publish event!");
 
                     }
                     Ok(())
@@ -102,11 +106,12 @@ pub fn run(rabbit_host: String, ) {
     let handle = core.handle();
     let addr = rabbit_host.parse().unwrap();
 
-    println!("Running Rabbit driver towards {}", addr);
+    debug!("Running Rabbit driver towards {}", addr);
 
     let (tx, rx) = mpsc::channel();
 
     thread::Builder::new().name("exchange thread".to_string()).spawn(move || {
+        debug!("Starting exch thread!");
         event_exchange(rx, rabbit_host);
     }).unwrap();
 
@@ -133,7 +138,7 @@ pub fn run(rabbit_host: String, ) {
             client.create_channel()
         }).and_then(|channel| {
             let id = channel.id;
-            println!("created channel with id: {}", id);
+            debug!("created channel with id: {}", id);
 
             let queue = "sensor_data";
             let ch = channel.clone();
@@ -156,7 +161,8 @@ pub fn run(rabbit_host: String, ) {
                     let json: Payload = serde_json::from_str(&data).unwrap();
                     db.insert(json.device.clone(), json.sensor.clone(), json.rssi.clone(), json.time.clone());
                     ch.basic_ack(message.delivery_tag);
-                    tx.send((json, data)).unwrap();
+                    tx.send((json, data))
+                        .expect("Couldn't send to exch thread!");
 
                     Ok(())
                 })
