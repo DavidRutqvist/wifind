@@ -45,7 +45,7 @@ job "zones" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/zones:1.0.1"
+        image = "docker.adventic.se/wifind/zones:1.0.2"
 
         port_map {
           http = 8080
