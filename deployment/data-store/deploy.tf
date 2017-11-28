@@ -3,6 +3,6 @@ provider "nomad" {
 }
 
 # Register a job
-resource "nomad_job" "zones" {
-  jobspec = "${file("./zones.hcl")}"
+resource "nomad_job" "datastore" {
+  jobspec = "${file("./datastore.hcl")}"
 }
