@@ -49,7 +49,7 @@ job "gateway" {
       }
 
       service {
-        name = "app"
+        name = "gateway"
         tags = ["http", "urlprefix-api.wifind.se:9999/"]
         port = "http"
 
