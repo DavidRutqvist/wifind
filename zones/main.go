@@ -93,11 +93,11 @@ func createInstances(mongoAddress string, consulAddress string, exchangedTopic s
 
 func main() {
 	mongoAddress := os.Getenv("MONGO_ADDRESS")
-	//consulAddress := os.Getenv("CONSUL_ADDRESS")
-	//exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
+	consulAddress := os.Getenv("CONSUL_ADDRESS")
+	exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
 
-	instances := createInstances(mongoAddress, "srv.wifind.se:8500", "event")
-	//instances := createInstances(mongoAddress, consulAddress, exchangedTopic)
+	//instances := createInstances(mongoAddress, "srv.wifind.se:8500", "event")
+	instances := createInstances(mongoAddress, consulAddress, exchangedTopic)
 
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/zones"), allZones(instances))
