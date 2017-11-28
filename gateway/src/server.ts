@@ -3,6 +3,7 @@ import * as express from "express";
 import * as logger from "morgan";
 import errorHandler = require("errorhandler");
 import * as Rx from "rxjs/Rx";
+import { IndexRoute } from "./routes/index";
 import { ZonesRoute } from "./routes/zones";
 import { SensorsRoute } from "./routes/sensors";
 import { ServiceFactory } from "./services/service-factory";
@@ -99,6 +100,7 @@ export class Server {
   public routes(): void {
     const router: express.Router = express.Router();
 
+    IndexRoute.create(router);
     SensorsRoute.create(router, this.serviceFactory);
     ZonesRoute.create(router, this.serviceFactory);
 
