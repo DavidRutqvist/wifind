@@ -3,7 +3,10 @@ import * as express from "express";
 import * as logger from "morgan";
 import errorHandler = require("errorhandler");
 import * as Rx from "rxjs/Rx";
-import { UsersRoute } from "./routes/users";
+import { ZonesRoute } from "./routes/zones";
+import { SensorsRoute } from "./routes/sensors";
+import { ServiceFactory } from "./services/service-factory";
+import { ServiceDiscovery } from "./utils/service-discovery";
 
 /**
  * The server.
@@ -12,6 +15,7 @@ import { UsersRoute } from "./routes/users";
  */
 export class Server {
   public app: express.Application;
+  private serviceFactory: ServiceFactory;
 
   /**
    * Bootstrap the application.
@@ -78,6 +82,12 @@ export class Server {
 
     // error handling
     this.app.use(errorHandler());
+
+    // set up service discovery
+    const discovery: ServiceDiscovery = new ServiceDiscovery(process.env.CONSUL_ADDR ? process.env.CONSUL_ADDR : "localhost:8500");
+
+    // set up service factory
+    this.serviceFactory = new ServiceFactory(discovery);
   }
 
   /**
@@ -89,7 +99,8 @@ export class Server {
   public routes(): void {
     const router: express.Router = express.Router();
 
-    UsersRoute.create(router);
+    SensorsRoute.create(router, this.serviceFactory);
+    ZonesRoute.create(router, this.serviceFactory);
 
     // use router middleware for /api-routes this to "reserve" the /-path for documentation or some ordinary webpage
     this.app.use("/api", router);
