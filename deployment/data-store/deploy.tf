@@ -1,5 +1,5 @@
 provider "nomad" {
-  address = "http://130.240.5.73:4646"
+  address = "http://localhost:4646"
 }
 
 # Register a job
