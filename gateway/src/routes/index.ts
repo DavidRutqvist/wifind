@@ -1,6 +1,6 @@
 "use strict";
 import { NextFunction, Request, Response, Router } from "express";
-import log from "winston";
+import * as log from "winston";
 
 /**
  * Defines the index route
