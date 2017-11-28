@@ -105,7 +105,7 @@ func main() {
 	mux.HandleFunc(pat.Put("/zones/:zoneid"), updateZone(instances))
 	mux.HandleFunc(pat.Get("/zones/:zoneid"), zoneByZoneID(instances))
 	mux.HandleFunc(pat.Get("/zones/:zoneid/children"), getChildrenFromId(instances))
-	mux.HandleFunc(pat.Get("/zones"), healthCheck(instances))
+	mux.HandleFunc(pat.Get("/"), healthCheck(instances))
 	fmt.Printf("Starting Router\n")
     http.ListenAndServe("0.0.0.0:8080", mux)
 }
