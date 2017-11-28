@@ -49,6 +49,7 @@ job "datastore" {
       env {
         "DB_HOST_ADDR" = "${NOMAD_ADDR_influxdb_influxdb}"
         "ROCKET_ENV" = "production"
+        "CONSUL_ADDR" = "${attr.unique.network.ip-address}:8500"
       }
 
       service {
