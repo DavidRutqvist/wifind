@@ -38,7 +38,6 @@ type Zone struct {
 	Id      bson.ObjectId `json:"id" bson:"_id,omitempty"`
 	Name string `json:"name"`
 	Location []float64 `json:"location"`
-	Children []bson.ObjectId	 `json:"children" bson:"children,omitempty"`
 	Parent bson.ObjectId `json:"parent" bson:"parent,omitempty"`
 }
 
@@ -94,18 +93,19 @@ func createInstances(mongoAddress string, consulAddress string, exchangedTopic s
 
 func main() {
 	mongoAddress := os.Getenv("MONGO_ADDRESS")
-	consulAddress := os.Getenv("CONSUL_ADDRESS")
-	exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
+	//consulAddress := os.Getenv("CONSUL_ADDRESS")
+	//exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
 
-	//instances := createInstances(mongoAddress, "srv.wifind.se:8500", "event")
-	instances := createInstances(mongoAddress, consulAddress, exchangedTopic)
+	instances := createInstances(mongoAddress, "srv.wifind.se:8500", "event")
+	//instances := createInstances(mongoAddress, consulAddress, exchangedTopic)
 
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/zones"), allZones(instances))
 	mux.HandleFunc(pat.Post("/zones"), addZone(instances))
 	mux.HandleFunc(pat.Put("/zones/:zoneid"), updateZone(instances))
 	mux.HandleFunc(pat.Get("/zones/:zoneid"), zoneByZoneID(instances))
-	mux.HandleFunc(pat.Get("/"), healthCheck(instances))
+	mux.HandleFunc(pat.Get("/zones/:zoneid/children"), getChildrenFromId(instances))
+	mux.HandleFunc(pat.Get("/zones"), healthCheck(instances))
 	fmt.Printf("Starting Router\n")
     http.ListenAndServe("0.0.0.0:8080", mux)
 }
@@ -141,7 +141,7 @@ func allZones(i *Instances) func(w http.ResponseWriter, r *http.Request) {
         c := session.DB("store").C("zones")
 
         zones := make([]Zone, 0)
-        err = c.Find(bson.M{}).All(&zones)
+		err = c.Find(bson.M{"parent": bson.M{"$exists": false}}).All(&zones)
         if err != nil {
 			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
@@ -155,6 +155,52 @@ func allZones(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 			log.Fatal(err)
 		}
         
+        ResponseWithJSON(w, respBody, http.StatusOK)
+    }
+}
+
+func getChildrenFromId(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
+    return func(w http.ResponseWriter, r *http.Request) {
+		requestDump, err := httputil.DumpRequest(r, false)
+		fmt.Println(string(requestDump))
+		failOnError(err, string(requestDump))
+
+        session := i.Session.Copy()
+		defer session.Close()
+
+		buffer := new(bytes.Buffer)
+		var response PostRes
+		var respBody []byte
+
+		zoneid := bson.ObjectIdHex(pat.Param(r, "zoneid"))
+
+        c := session.DB("store").C("zones")
+
+		var zones []Zone
+		err = c.Find(bson.M{"parent": zoneid}).All(&zones)
+        if err != nil {
+			response = PostRes{Success: false, Message: "Database error"}
+			json.NewEncoder(buffer).Encode(response)
+			respBody := buffer.Bytes()
+			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
+			return
+        }
+		
+        if len(zones) == 0 {
+			response = PostRes{Success: false, Message: "No children found"}
+			json.NewEncoder(buffer).Encode(response)
+			respBody := buffer.Bytes()
+			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
+			return
+		}
+
+		
+
+        respBody, err = json.MarshalIndent(zones, "", "  ")
+        if err != nil {
+            log.Fatal(err)
+        }
+
         ResponseWithJSON(w, respBody, http.StatusOK)
     }
 }
@@ -208,6 +254,8 @@ func addZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Printf("Publishing ZONE_CREATED event to %v\n", topic)
 		i.PublishEvent(topic, body)
+		
+		buffer = new(bytes.Buffer)
 
 		response = PostRes{Success: true, Message: "Zone created"}
 		json.NewEncoder(buffer).Encode(response)
@@ -316,6 +364,8 @@ func updateZone(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Publishing ZONE_UPDATED event to %v\n", topic)
 		i.PublishEvent(topic, body)
 
+		buffer = new(bytes.Buffer)
+
 		response = PostRes{Success: true, Message: "Zone updated"}
 		json.NewEncoder(buffer).Encode(response)
 		respBody = buffer.Bytes()
@@ -335,7 +385,7 @@ func (i *Instances) PublishEvent(topic string, body []byte) {
 	err = channel.ExchangeDeclare(
 		i.ExchangeTopic, 	// name
 		"topic",			// topic
-		false,				// durable
+		true,				// durable
 		false,				// auto-deleted
 		false,				// internal
 		false,				// no-wait
