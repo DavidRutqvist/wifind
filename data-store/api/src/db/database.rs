@@ -94,6 +94,12 @@ impl DB {
         json!(result)
     }
 
+    pub fn get_sensors(&self) -> serde_json::Value {
+        let result = self.query("show tag values with key=sensor");
+
+        json!(result)
+    }
+
     pub fn get_sensor(&self, sensor_id: String) -> serde_json::Value {
         let result = self.query(
             &format!("select * from pkt_txn where sensor='{}'",

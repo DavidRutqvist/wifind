@@ -8,7 +8,7 @@ use std::env;
 pub fn get_node_address(name: &str) -> Option<String> {
 
     let server = env::var("CONSUL_ADDR")
-        .unwrap_or("130.240.5.73:8500".to_string());
+        .expect("No CONSUL_ADDR provided!");
 
     println!("Fetching {} from Consul at http://{}", name, server);
     let client = Client::new(&format!("http://{}", server));

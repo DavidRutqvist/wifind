@@ -51,6 +51,12 @@ fn sensor(sensor_id: String, db: State<DB>) -> Json<serde_json::Value> {
     Json(result)
 }
 
+#[get("/")]
+fn sensors(db: State<DB>) -> Json<serde_json::Value> {
+    let result = db.get_sensors();
+    Json(result)
+}
+
 #[get("/<device_hash>")]
 fn device(device_hash: String, db: State<DB>) -> Json<serde_json::Value> {
     let result = db.get_device(device_hash);
@@ -96,7 +102,7 @@ fn main() {
         .mount("/health", routes![health_check])
         .mount("/dump", routes![dump])
         .mount("/time", routes![time_interval])
-        .mount("/sensor", routes![sensor])
+        .mount("/sensor", routes![sensor, sensors])
         .mount("/device", routes![device])
         .launch();
 }
