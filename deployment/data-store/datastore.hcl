@@ -74,7 +74,7 @@ job "datastore" {
         image = "influxdb"
 
         volumes = [
-          "/srv/influxdb:/var/lib/influxdb"
+          "/mnt/datastore/influxdb:/var/lib/influxdb"
         ]
 
         port_map {
