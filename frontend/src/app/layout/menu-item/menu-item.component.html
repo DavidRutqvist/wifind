@@ -1,13 +1,13 @@
 <li routerLinkActive="active open" appNavDropdown class="nav-dropdown" *ngIf="item.children && item.children.length > 0">
-  <a md-ripple href="javascript:void(0)" class="" appNavDropdownToggle *ngIf="!item.link"><i [ngClass]="item.icon" *ngIf="item.icon"></i> {{ item.label }}</a>
-  <a md-ripple [routerLink]="[item.link]" class="" appNavDropdownToggle *ngIf="item.link"><i [ngClass]="item.icon" *ngIf="item.icon"></i> {{ item.label }}</a>
+  <a md-ripple href="javascript:void(0)" appNavDropdownToggle *ngIf="!item.link"><i [ngClass]="item.icon" *ngIf="!!item.icon"></i> {{ item.label }}</a>
+  <a md-ripple [routerLink]="[item.link]" appNavDropdownToggle *ngIf="!!item.link"><i [ngClass]="item.icon" *ngIf="!!item.icon"></i> {{ item.label }}</a>
   <ul class="nav-sub">
     <app-menu-item [item]="child" class="app-menu-item" *ngFor="let child of item.children"></app-menu-item>
   </ul>
 </li>
-<li routerLinkActive="active" *ngIf="(!item.children || item.children.length === 0) && item.link">
-  <a href="javascript:void(0)" [routerLink]="[item.link]" *ngIf="item.link"><i [ngClass]="item.icon" *ngIf="item.icon"></i> {{ item.label }}</a>
+<li routerLinkActive="active" *ngIf="(!item.children || item.children.length === 0) && !!item.link">
+  <a href="javascript:void(0)" [routerLink]="[item.link]" *ngIf="!!item.link"><i [ngClass]="item.icon" *ngIf="!!item.icon"></i> {{ item.label }}</a>
 </li>
 <li class="sidebar-header" *ngIf="(!item.children || item.children.length === 0) && !item.link">
-  <i [ngClass]="item.icon" *ngIf="item.icon"></i> {{ item.label }}
+  <i [ngClass]="item.icon" *ngIf="!!item.icon"></i> {{ item.label }}
 </li>
