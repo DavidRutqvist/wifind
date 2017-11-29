@@ -1,6 +1,7 @@
 "use strict";
 import { NextFunction, Request, Response, Router } from "express";
 import { ServiceFactory } from "../services/service-factory";
+import { AxiosHelper } from "../utils/axios-helper";
 import * as log from "winston";
 
 /**
@@ -39,17 +40,25 @@ export class SensorsRoute {
   constructor(private readonly serviceFactory: ServiceFactory) { }
 
   public getSensors(req: Request, res: Response, next: NextFunction): void {
-    res.status(500).json({
-      success: false,
-      message: "Not yet implemented"
-    });
+    this.serviceFactory.getDatastoreService()
+      .flatMap(svc => svc.getSensors())
+      .subscribe(
+          sensors => res.json({
+              success: true,
+              sensors: sensors
+          }),
+          err => AxiosHelper.handleError(err, res));
   }
 
   public getSensor(req: Request, res: Response, next: NextFunction): void {
-    res.status(500).json({
-      success: false,
-      message: "Not yet implemented"
-    });
+    this.serviceFactory.getDatastoreService()
+      .flatMap(svc => svc.getSensor(req.params.id))
+      .subscribe(
+          sensor => res.json({
+              success: true,
+              sensor: sensor
+          }),
+          err => AxiosHelper.handleError(err, res));
   }
 
   public getSensorLocations(req: Request, res: Response, next: NextFunction): void {
