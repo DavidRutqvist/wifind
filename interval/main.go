@@ -117,8 +117,10 @@ func main() {
     http.ListenAndServe("0.0.0.0:8080", mux)
 
 }
-func readFromZones(){
-	resp, err := http.Get("http.se.com.muuuuuu.nuuuuuuuujust 	")
+func (i *Instances) readFromZones(){
+	//The name of the service.... that we needed...
+	i.Consul.Catalog.Service("")
+	resp, err := http.Get("")
 	if err != nil {
 		failOnError(err, "Read from Zones failed")
 	}
