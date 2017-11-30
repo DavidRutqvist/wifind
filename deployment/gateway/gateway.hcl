@@ -1,4 +1,4 @@
-job "app" {
+job "gateway" {
   datacenters = ["dc1"]
   type        = "service"
 
@@ -6,7 +6,7 @@ job "app" {
     max_parallel = 1
   }
 
-  group "app" {
+  group "gateway" {
     count = 2
 
     restart {
@@ -16,14 +16,14 @@ job "app" {
       mode     = "delay"
     }
 
-    task "app" {
+    task "gateway" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/app:0.0.3"
+        image = "docker.adventic.se/wifind/gateway:0.0.1"
 
         port_map {
-          http = 80
+          http = 3000
         }
         ssl = true
         auth {
@@ -31,6 +31,10 @@ job "app" {
               password = "nomad"
               server_address = "docker.adventic.se"
         }
+      }
+
+      env {
+        "CONSUL_ADDR" = "${attr.unique.network.ip-address}:8500"
       }
 
       resources {
@@ -45,8 +49,8 @@ job "app" {
       }
 
       service {
-        name = "app"
-        tags = ["http", "urlprefix-app.wifind.se:9999/"]
+        name = "gateway"
+        tags = ["http", "urlprefix-api.wifind.se:9999/"]
         port = "http"
 
         check {
@@ -55,7 +59,7 @@ job "app" {
           interval = "10s"
           timeout  = "2s"
           port     = "http"
-          path     = "/"
+          path     = "/api"
         }
       }
     }
