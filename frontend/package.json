@@ -1,6 +1,6 @@
 {
-	"name": "MaterialLabAngular",
-	"version": "0.0.0",
+	"name": "wifind",
+	"version": "0.0.3",
 	"license": "MIT",
 	"scripts": {
 		"ng": "ng",
@@ -27,6 +27,7 @@
 		"@angular/platform-browser-dynamic": "^4.4.4",
 		"@angular/router": "^4.4.4",
 		"@ng-bootstrap/ng-bootstrap": "^1.0.0-beta.3",
+		"axios": "^0.17.1",
 		"bootstrap": "4.0.0-beta",
 		"core-js": "^2.5.1",
 		"css-loader": "^0.28.7",
