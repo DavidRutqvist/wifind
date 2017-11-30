@@ -36,11 +36,11 @@ type PostRes struct {
 
 type Interval struct {
 	Id      bson.ObjectId `json:"id" bson:"_id,omitempty"`
-	DeviceMAC string `json:"devicemac"`
-	SensorMAC string `json:"sensormac"`
-	from uint64 `json:"from"` 
-	to uint64 `json:"to"`
-	zone string `json:zone`
+	DeviceMAC string `bson:"devicemac" json:"devicemac"`
+	SensorMAC string `bson:"sensormac" json:"sensormac"`
+	from time.Time `bson:"from" json:"from"` 
+	to time.Time `bson:"to" json:"to"`
+	zone string `bson:"zone" json:"zone"`
 
 }
 type Zone struct {
@@ -110,7 +110,7 @@ func main() {
 	mux.HandleFunc(pat.Get("/intervals/zones/:zonename/:from/:to"), getIntervalByZoneNameDuringInterval(instances))
 	mux.HandleFunc(pat.Get("/intervals/device/:deviceid"), getIntervalByDeviceID(instances))
 	mux.HandleFunc(pat.Get("/intervals/device/:zonename"), getIntervalForDeviceInZone(instances))
-	mux.HandleFunc(pat.Get("/intervals/zones/:at"), getIntervalForZoneByTime(instances))
+	mux.HandleFunc(pat.Get("/intervals/zones/:zonename/:at"), getIntervalForZoneByTime(instances))
 	mux.HandleFunc(pat.Get("/"), healthCheck(instances))
 	fmt.Printf("Starting Router\n")
     http.ListenAndServe("0.0.0.0:8080", mux)
@@ -325,28 +325,93 @@ func getIntervalByZoneIDDuringInterval(i *Instances) func(w http.ResponseWriter,
 		requestDump, err := httputil.DumpRequest(r, false)
 		fmt.Println(string(requestDump))
 		failOnError(err, string(requestDump))
+
+        session := i.Session.Copy()
+		defer session.Close()
+
 		buffer := new(bytes.Buffer)
 		var response PostRes
 		var respBody []byte
 
-		session := i.Session.Copy()
-        defer session.Close()
+		from := bson.ObjectIdHex(pat.Param(r, "from"))
+		to := bson.ObjectIdHex(pat.Param(r, "to"))
+		zonename := bson.ObjectIdHex(pat.Param(r, "zonename"))
 
         c := session.DB("store").C("intervals")
-	}
+        timeIntervals := []Interval
+        intervalsWithin := []Interval
+        err = c.Find(bson.M{"_zonename": zonename, }).All(&timeIntervals)
+        if err != nil {
+			response = PostRes{Success: false, Message: "Database error"}
+			json.NewEncoder(buffer).Encode(response)
+			respBody := buffer.Bytes()
+			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
+			return
+        }
+		for i := 0; i < len(timeIntervals); i++ {
+			if timeIntervals[i].from.Before(to) && timeIntervals[i].to.After(from){
+				intervalsWithin += timeIntervals[i]
+			}
+		}
+        if intervalsWithin[0].zonename == "" {
+			response = PostRes{Success: false, Message: "Interval not found"}
+			json.NewEncoder(buffer).Encode(response)
+			respBody := buffer.Bytes()
+			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
+			return
+		}
+        respBody, err = json.MarshalIndent(intervalsWithin, "", "  ")
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        ResponseWithJSON(w, respBody, http.StatusOK)
+    }
 }
 func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
     return func(w http.ResponseWriter, r *http.Request) {
 		requestDump, err := httputil.DumpRequest(r, false)
 		fmt.Println(string(requestDump))
 		failOnError(err, string(requestDump))
+
+        session := i.Session.Copy()
+		defer session.Close()
+
 		buffer := new(bytes.Buffer)
 		var response PostRes
 		var respBody []byte
 
-		session := i.Session.Copy()
-        defer session.Close()
+		at := bson.ObjectIdHex(pat.Param(r, "at"))
+		zonename := bson.ObjectIdHex(pat.Param(r, "zonename"))
 
         c := session.DB("store").C("intervals")
-	}
+        timeIntervals := []Interval
+        intervalsWithin := []Interval
+        err = c.Find(bson.M{"_zonename": zonename, }).All(&timeIntervals)
+        if err != nil {
+			response = PostRes{Success: false, Message: "Database error"}
+			json.NewEncoder(buffer).Encode(response)
+			respBody := buffer.Bytes()
+			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
+			return
+        }
+		for i := 0; i < len(timeIntervals); i++ {
+			if timeIntervals[i].from.Before(at) && timeIntervals[i].to.After(at){
+				intervalsWithin += timeIntervals[i]
+			}
+		}
+        if intervalsWithin[0].zonename == "" {
+			response = PostRes{Success: false, Message: "Interval not found"}
+			json.NewEncoder(buffer).Encode(response)
+			respBody := buffer.Bytes()
+			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
+			return
+		}
+        respBody, err = json.MarshalIndent(intervalsWithin, "", "  ")
+        if err != nil {
+            log.Fatal(err)
+        }
+
+        ResponseWithJSON(w, respBody, http.StatusOK)
+    }
 }
