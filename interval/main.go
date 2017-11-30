@@ -117,17 +117,20 @@ func main() {
     http.ListenAndServe("0.0.0.0:8080", mux)
 
 }
-func (i *Instances) readFromZones(){
-	//The name of the service.... that we needed...
-	i.Consul.Catalog.Service("")
-	resp, err := http.Get("")
+func (i *Instances) readFromSensorlocation(i, sensorid string) string {
+	addresses, q, err := i.Consul.Catalog.Service("sensorlocation")
+	resp, err := http.Get(addresses[0]+"/sensors/"+sensorid)
 	if err != nil {
 		failOnError(err, "Read from Zones failed")
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err.Error())
+	}
+	return string(body))
 }
-func readFromZonesMeta(){
+func readFromZonesMeta(i *Instances) func(zoneid string){
 	resp, err := http.Get("http://example.com/")
 	if err != nil {
 		failOnError(err, "Read from Zone Metadata failed")
