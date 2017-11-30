@@ -41,6 +41,7 @@ type Interval struct {
 	from time.Time `bson:"from" json:"from"` 
 	to time.Time `bson:"to" json:"to"`
 	zone string `bson:"zone" json:"zone"`
+	rssi uint32 `bson:"rssi" json:"rssi"`
 
 }
 type Zone struct {
@@ -108,9 +109,9 @@ func main() {
 	mux.HandleFunc(pat.Get("/intervals/:at"), getIntervalByTime(instances))
 	mux.HandleFunc(pat.Get("/intervals/zones/:zonename"), getIntervalByZoneName(instances))
 	mux.HandleFunc(pat.Get("/intervals/zones/:zonename/:from/:to"), getIntervalByZoneNameDuringInterval(instances))
+	mux.HandleFunc(pat.Get("/intervals/zones/:zonename/:at"), getIntervalForZoneByTime(instances))
 	mux.HandleFunc(pat.Get("/intervals/device/:deviceid"), getIntervalByDeviceID(instances))
 	mux.HandleFunc(pat.Get("/intervals/device/:zonename"), getIntervalForDeviceInZone(instances))
-	mux.HandleFunc(pat.Get("/intervals/zones/:zonename/:at"), getIntervalForZoneByTime(instances))
 	mux.HandleFunc(pat.Get("/"), healthCheck(instances))
 	fmt.Printf("Starting Router\n")
     http.ListenAndServe("0.0.0.0:8080", mux)
@@ -414,4 +415,35 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
 
         ResponseWithJSON(w, respBody, http.StatusOK)
     }
+}
+func (i *Instances) PublishEvent(topic string, body []byte) {
+	connection, err := amqp.Dial(i.RabbitEndpoint)
+	failOnError(err, "Failed to open a connection\n")
+	defer connection.Close()
+
+	channel, err := connection.Channel()
+	failOnError(err, "Failed to open a channel\n")
+	defer channel.Close()
+
+	err = channel.ExchangeDeclare(
+		i.ExchangeTopic, 	// name
+		"topic",			// topic
+		true,				// durable
+		false,				// auto-deleted
+		false,				// internal
+		false,				// no-wait
+		nil,				// arguments
+	)
+	failOnError(err, "Failed to declare an exchange.")
+
+	err = channel.Publish(
+		i.ExchangeTopic,	// exchange
+		topic,				// topic
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:	"text/plain",
+			Body:			body,
+	})
+	failOnError(err, "Failed to publish event.")
 }
