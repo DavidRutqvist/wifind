@@ -8,6 +8,7 @@ import * as log from "winston";
 import { SensorsRoute } from "./routes/sensors";
 import { ZonesRoute } from "./routes/zones";
 import { Database } from "./database";
+import { IndexRoute } from "./routes/index";
 
 /**
  * The server.
@@ -83,6 +84,7 @@ export class Server {
     // create routes
     SensorsRoute.create(router);
     ZonesRoute.create(router);
+    IndexRoute.create(router);
 
     // use router middleware
     this.app.use("/", router);
