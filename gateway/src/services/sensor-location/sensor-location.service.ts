@@ -18,6 +18,15 @@ export class SensorLocationService {
       .catch(err => this.catch404(err));
   }
 
+  public addSensorToZone(zoneId: string, sensorId: string, from: number, to?: number): Rx.Observable<boolean> {
+    return Rx.Observable.fromPromise(this.getAxios().post("/sensors/" + sensorId + "/zones", {
+      zoneId: zoneId,
+      from: from,
+      to: to
+    }))
+      .map(res => res.data.success);
+  }
+
   private getAxios(): AxiosInstance {
     return axios.create({
       baseURL: this.serviceUri,

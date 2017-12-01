@@ -36,6 +36,10 @@ export class ZonesRoute {
       new ZonesRoute(serviceFactory).getSensors(req, res, next);
     });
 
+    router.post("/zones/:id/sensors", (req: Request, res: Response, next: NextFunction) => {
+      new ZonesRoute(serviceFactory).addSensor(req, res, next);
+    });
+
     router.get("/zones/:id/children", (req: Request, res: Response, next: NextFunction) => {
       new ZonesRoute(serviceFactory).getZoneChildren(req, res, next);
     });
