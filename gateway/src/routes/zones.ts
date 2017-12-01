@@ -144,6 +144,43 @@ export class ZonesRoute {
         err => AxiosHelper.handleError(err, res));
   }
 
+  public addSensor(req: Request, res: Response, next: NextFunction): void {
+    if (!req.body.sensorId) {
+      res.status(400).json({
+        success: false,
+        message: "Missing mandatory sensorId in body"
+      });
+      return;
+    }
+
+    if (!req.body.from) {
+      res.status(400).json({
+        success: false,
+        message: "Missing mandatory from in body"
+      });
+      return;
+    }
+
+    this.serviceFactory.getSensorLocationService()
+      .flatMap(svc => svc.addSensorToZone(req.params.id, req.body.sensorId, req.body.from, req.body.to))
+      .subscribe(
+        success => {
+          if (success) {
+            res.status(201).json({
+              success: true,
+              message: "Sensor successfully added to zone"
+            });
+          } else {
+            res.status(500).json({
+              success: false,
+              message: "Could not add sensor to zone"
+            });
+          }
+        },
+        err => AxiosHelper.handleError(err, res)
+      );
+  }
+
   public getOccupation(req: Request, res: Response, next: NextFunction): void {
     res.status(500).json({
       success: false,
