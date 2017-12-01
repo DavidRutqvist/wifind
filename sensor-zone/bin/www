@@ -1,0 +1,105 @@
+#!/usr/bin/env node
+"use strict";
+
+//module dependencies
+var server = require("../dist/server");
+var debug = require("debug")("unit-settings-service:server");
+var http = require("http");
+
+//create http server
+var httpPort = normalizePort(process.env.SERVICE_PORT || 3000);
+const _server = server.Server.bootstrap();
+var app = _server.app;
+app.set("port", httpPort);
+var httpServer = http.createServer(app);
+
+//listen on provided ports
+httpServer.listen(httpPort);
+
+//add error handler
+httpServer.on("error", onError);
+
+//start listening on port
+httpServer.on("listening", onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+function onError(error) {
+  if (error.syscall !== "listen") {
+    throw error;
+  }
+
+  var bind = typeof httpPort === "string"
+    ? "Pipe " + httpPort
+    : "Port " + httpPort;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case "EACCES":
+      console.error(bind + " requires elevated privileges");
+      process.exit(1);
+      break;
+    case "EADDRINUSE":
+      console.error(bind + " is already in use");
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+function onListening() {
+  var addr = httpServer.address();
+  var bind = typeof addr === "string"
+    ? "pipe " + addr
+    : "port " + addr.port;
+  debug("Listening on " + bind);
+}
+
+// this function is called when you want the server to die gracefully
+// i.e. wait for existing connections
+var gracefulShutdown = function() {
+  console.log("Received kill signal, shutting down gracefully.");
+  _server.shutdown(function() {
+    console.log("Server internally shutdown, closing out remaining connections.");
+    httpServer.close(function() {
+      console.log("Closed out remaining connections.");
+      process.exit();
+    });
+  });
+
+   // if after
+   setTimeout(function() {
+       console.error("Could not close connections in time, forcefully shutting down.");
+       process.exit()
+  }, 2*1000);
+}
+
+// listen for TERM signal .e.g. kill
+process.on ('SIGTERM', gracefulShutdown);
+
+// listen for INT signal e.g. Ctrl-C
+process.on ('SIGINT', gracefulShutdown);
