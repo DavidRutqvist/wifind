@@ -1,6 +1,6 @@
 "use strict";
 import * as Rx from "rxjs/Rx";
-import log from "winston";
+import * as log from "winston";
 import axios, { AxiosInstance } from "axios";
 import { SensorLocation } from "./sensor-location";
 
@@ -14,7 +14,8 @@ export class SensorLocationService {
   
   public getSensors(zoneId: string): Rx.Observable<SensorLocation[]> {
     return Rx.Observable.fromPromise(this.getAxios().get("/zones/" + zoneId))
-      .map(res => res.data);
+      .map(res => res.data)
+      .catch(err => this.catch404(err));
   }
 
   private getAxios(): AxiosInstance {
@@ -22,5 +23,13 @@ export class SensorLocationService {
       baseURL: this.serviceUri,
       timeout: 1000
     });
+  }
+
+  private catch404(err: Error): Rx.Observable<SensorLocation[]> {
+    if ((<any>err).response && (<any>err).response.status === 404) {
+      return Rx.Observable.of([]);
+    } else {
+      return Rx.Observable.throw(err);
+    }
   }
 }

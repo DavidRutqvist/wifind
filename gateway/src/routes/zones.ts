@@ -32,6 +32,10 @@ export class ZonesRoute {
       new ZonesRoute(serviceFactory).getZone(req, res, next);
     });
 
+    router.get("/zones/:id/sensors", (req: Request, res: Response, next: NextFunction) => {
+      new ZonesRoute(serviceFactory).getSensors(req, res, next);
+    });
+
     router.get("/zones/:id/children", (req: Request, res: Response, next: NextFunction) => {
       new ZonesRoute(serviceFactory).getZoneChildren(req, res, next);
     });
@@ -123,6 +127,17 @@ export class ZonesRoute {
         },
         err => AxiosHelper.handleError(err, res)
       );
+  }
+
+  public getSensors(req: Request, res: Response, next: NextFunction): void {
+    this.serviceFactory.getSensorLocationService()
+      .flatMap(svc => svc.getSensors(req.params.id))
+      .subscribe(
+        sensors => res.json({
+          success: true,
+          sensors: sensors
+        }),
+        err => AxiosHelper.handleError(err, res));
   }
 
   public getOccupation(req: Request, res: Response, next: NextFunction): void {
