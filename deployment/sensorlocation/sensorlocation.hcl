@@ -45,10 +45,10 @@ job "sensorlocation" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/sensorlocation:1.0.0"
+        image = "docker.adventic.se/wifind/sensorlocation:1.1.0"
 
         port_map {
-          http = 8080
+          http = 3000
         }
 
         ssl = true
@@ -60,9 +60,7 @@ job "sensorlocation" {
       }
 
       env {
-        "MONGO_ADDRESS" = "${NOMAD_ADDR_mongo_mongo}"
-        "CONSUL_ADDRESS" = "${attr.unique.network.ip-address}:8500"
-        "EXCHANGE_TOPIC" = "event"
+        "MONGO_CONNECTION_STRING" = "mongodb://${NOMAD_ADDR_mongo_mongo}/sensorlocation"
       }
 
       resources {
