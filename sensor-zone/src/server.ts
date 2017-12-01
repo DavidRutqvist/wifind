@@ -5,7 +5,8 @@ import * as logger from "morgan";
 import * as errorHandler from "errorhandler";
 import * as Rx from "rxjs/Rx";
 import * as log from "winston";
-import { UnitsRoute } from "./routes/units";
+import { SensorsRoute } from "./routes/sensors";
+import { ZonesRoute } from "./routes/zones";
 import { Database } from "./database";
 
 /**
@@ -80,7 +81,8 @@ export class Server {
     const router: express.Router = express.Router();
 
     // create routes
-    UnitsRoute.create(router);
+    SensorsRoute.create(router);
+    ZonesRoute.create(router);
 
     // use router middleware
     this.app.use("/", router);

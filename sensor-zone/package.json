@@ -1,6 +1,6 @@
 {
   "name": "ts-service",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A service description",
   "author": "David Rutqvist <david.rutqvist@bnearit.se> (http://bnearit.se)",
   "scripts": {

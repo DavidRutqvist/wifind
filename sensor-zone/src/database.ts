@@ -6,6 +6,7 @@ import { ModelImpl } from "./model-impl";
 import { ISensorLocation } from "./interfaces/sensor-location";
 import { ISensorLocationResult } from "./interfaces/sensor-location-result";
 import { SensorNotFoundError } from "./errors/sensor-not-found-error";
+import { ZoneNotFoundError } from './errors/zone-not-found-error';
 
 export class Database {
     private static _instance: Database;
@@ -52,18 +53,18 @@ export class Database {
         .map(location => this.toResult(location))
         .toArray();
     }
+
     public getZoneSensors(zoneId: string): Rx.Observable<ISensorLocationResult[]> {
         return Rx.Observable.fromPromise(this.model.sensorLocation.find({
             zoneId: zoneId
         },
         {_id: false, __v: false})
         .sort({from: -1}))
-        .flatMap(locations => this.throwSensorNotFound(locations))
+        .flatMap(locations => this.throwZoneNotFound(locations))
         .flatMap(x => x)
         .map(location => this.toResult(location))
         .toArray();
     }
-
     
     public updateLastIfNull(sensorId: string, from: Date): Rx.Observable<ISensorLocation> {
         return Rx.Observable.fromPromise(this.model.sensorLocation.find({
@@ -98,12 +99,19 @@ export class Database {
             .map(location => this.toResult(location));
     }
 
-
     private throwSensorNotFound(locations: ISensorLocation[]): Rx.Observable<ISensorLocation[]> {
         if (locations && locations.length > 0) {
             return Rx.Observable.of(locations);
         } else {
             return Rx.Observable.throw(new SensorNotFoundError("The specified sensor could not be found"));
+        }
+    }
+
+    private throwZoneNotFound(locations: ISensorLocation[]): Rx.Observable<ISensorLocation[]> {
+        if (locations && locations.length > 0) {
+            return Rx.Observable.of(locations);
+        } else {
+            return Rx.Observable.throw(new ZoneNotFoundError("The specified zone could not be found"));
         }
     }
 
