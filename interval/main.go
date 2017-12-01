@@ -16,6 +16,7 @@ import (
 	"github.com/streadway/amqp"
 	"time"
 	"io/ioutil"
+	"strconv"
 )
 
 
@@ -130,7 +131,7 @@ func main() {
     http.ListenAndServe("0.0.0.0:8080", mux)
 
 }
-func (i *Instances) readFromZones(sensorid string) bson.ObjectId{
+/*func (i *Instances) readFromZones(sensorid string) bson.ObjectId{
 
 	address,_, err := i.Consul.Catalog.Service("sensorlocation")
 	resp, err := http.Get(address[0]+"/sensors/"+sensorid)
@@ -178,7 +179,7 @@ func (i *Instances) readFromDataStore() datastore{
 		failOnError(err, "Decode from Datastore failed")
 	}
 	return m
-}
+}*/
 func healthCheck(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
     return func(w http.ResponseWriter, r *http.Request) {
 		requestDump, err := httputil.DumpRequest(r, false)
@@ -240,7 +241,12 @@ func getIntervalByTime(i *Instances) func(w http.ResponseWriter, r *http.Request
 		var response PostRes
 		var respBody []byte
 
-		at := bson.time.Time(pat.Param(r, "at"))
+		at := (pat.Param(r, "at"))
+		i, err := strconv.ParseInt(at, 10, 64)
+	    if err != nil {
+	        panic(err)
+	    }
+	    tm := time.Unix(i, 0)
 
         c := session.DB("store").C("intervals")
         var allIntervals []Interval
@@ -254,7 +260,7 @@ func getIntervalByTime(i *Instances) func(w http.ResponseWriter, r *http.Request
 			return
         }
 		for i := 0; i < len(allIntervals); i++ {
-			if allIntervals[i].from.Before(at) && allIntervals[i].to.After(at){
+			if allIntervals[i].from.Before(tm) && allIntervals[i].to.After(tm){
 				intervalsWithin = append(intervalsWithin,allIntervals[i])
 			}
 		}
@@ -416,8 +422,18 @@ func getIntervalByZoneNameDuringInterval(i *Instances) func(w http.ResponseWrite
 		var response PostRes
 		var respBody []byte
 
-		from := bson.ObjectIdHex(pat.Param(r, "from"))
-		to := bson.ObjectIdHex(pat.Param(r, "to"))
+		from := (pat.Param(r, "from"))
+		i, err := strconv.ParseInt(from, 10, 64)
+	    if err != nil {
+	        panic(err)
+	    }
+	    tmfrom := time.Unix(i, 0)
+	    to := (pat.Param(r, "to"))
+		y, err := strconv.ParseInt(to, 10, 64)
+	    if err != nil {
+	        panic(err)
+	    }
+	    tmto := time.Unix(y, 0)
 		zonename := bson.ObjectIdHex(pat.Param(r, "zonename"))
 
         c := session.DB("store").C("intervals")
@@ -432,7 +448,7 @@ func getIntervalByZoneNameDuringInterval(i *Instances) func(w http.ResponseWrite
 			return
         }
 		for i := 0; i < len(timeIntervals); i++ {
-			if timeIntervals[i].from.Before(to) && timeIntervals[i].to.After(from){
+			if timeIntervals[i].from.Before(tmto) && timeIntervals[i].to.After(tmfrom){
 				intervalsWithin = append(intervalsWithin,timeIntervals[i])
 			}
 		}
@@ -464,7 +480,12 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
 		var response PostRes
 		var respBody []byte
 
-		at := bson.ObjectIdHex(pat.Param(r, "at"))
+		at := (pat.Param(r, "at"))
+		i, err := strconv.ParseInt(at, 10, 64)
+	    if err != nil {
+	        panic(err)
+	    }
+	    tm := time.Unix(i, 0)
 		zonename := bson.ObjectIdHex(pat.Param(r, "zonename"))
 
         c := session.DB("store").C("intervals")
@@ -479,7 +500,7 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
 			return
         }
 		for i := 0; i < len(timeIntervals); i++ {
-			if timeIntervals[i].from.Before(at) && timeIntervals[i].to.After(at){
+			if timeIntervals[i].from.Before(tm) && timeIntervals[i].to.After(tm){
 				intervalsWithin = append(intervalsWithin,timeIntervals[i])
 			}
 		}
