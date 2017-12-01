@@ -9,12 +9,12 @@ export class SensorLocationService {
 
   public getLocations(sensorId: string): Rx.Observable<SensorLocation[]> {
     return Rx.Observable.fromPromise(this.getAxios().get("/sensors/" + sensorId))
-      .map(res => res.data);
+      .map(res => res.data.sensors);
   }
   
   public getSensors(zoneId: string): Rx.Observable<SensorLocation[]> {
     return Rx.Observable.fromPromise(this.getAxios().get("/zones/" + zoneId))
-      .map(res => res.data)
+      .map(res => res.data.sensors)
       .catch(err => this.catch404(err));
   }
 
