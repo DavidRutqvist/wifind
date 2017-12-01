@@ -1,25 +1,18 @@
 import { Injectable } from "@angular/core";
+import axios, { AxiosInstance } from "axios";
 declare var $: any;
 
 @Injectable()
 export class ConfigService {
-	public app: any;
-	public profile: any;
-	public appLayout: any;
-	public breakpoint: any;
+  public app: any;
+  public appLayout: any;
+  public breakpoint: any;
 
-	constructor() {
-		this.app = {
-			name: "MaterialLab"
+  constructor() {
+    this.app = {
+			api: "http://api.wifind.se:9999/api"
 		};
-		this.profile = {
-			user: "Fredrick Palmer",
-			userId:"160d0948-62a7-4439-98aa-0b95f1143b0d",
-			userEmail:"fredrick@materiallab.pro",
-			userImg:"/assets/img/profiles/18.jpg",
-			userTitle:"Frontend Developer",
-			isProfileVisible: true,
-		};
+
 		this.appLayout = {
 			isApp_Boxed: false,
 			isApp_SidebarLeftCollapsed: false,
@@ -27,11 +20,18 @@ export class ConfigService {
 			isApp_SidebarRightOpen: false,
 			isApp_BackdropVisible: false
 		};
+
 		this.breakpoint = {
 			desktopLG: 1280,
 			desktop: 992,
 			tablet: 768,
 			mobile: 576
 		};
+	}
+
+	public getApiClient(): AxiosInstance {
+		return axios.create({
+			baseURL: this.app.api
+		});
 	}
 }

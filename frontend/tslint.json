@@ -15,8 +15,7 @@
     "import-blacklist": [true, "rxjs"],
     "import-spacing": true,
     "indent": [
-      true,
-      "spaces"
+      true
     ],
     "interface-over-type-literal": true,
     "label-position": true,
@@ -65,8 +64,7 @@
     ],
     "prefer-const": true,
     "quotemark": [
-      true,
-      "single"
+      true
     ],
     "radix": true,
     "semicolon": [
