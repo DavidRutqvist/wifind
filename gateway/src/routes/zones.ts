@@ -32,6 +32,14 @@ export class ZonesRoute {
       new ZonesRoute(serviceFactory).getZone(req, res, next);
     });
 
+    router.get("/zones/:id/sensors", (req: Request, res: Response, next: NextFunction) => {
+      new ZonesRoute(serviceFactory).getSensors(req, res, next);
+    });
+
+    router.post("/zones/:id/sensors", (req: Request, res: Response, next: NextFunction) => {
+      new ZonesRoute(serviceFactory).addSensor(req, res, next);
+    });
+
     router.get("/zones/:id/children", (req: Request, res: Response, next: NextFunction) => {
       new ZonesRoute(serviceFactory).getZoneChildren(req, res, next);
     });
@@ -118,6 +126,54 @@ export class ZonesRoute {
             res.status(500).json({
               success: false,
               message: "Could not create zone"
+            });
+          }
+        },
+        err => AxiosHelper.handleError(err, res)
+      );
+  }
+
+  public getSensors(req: Request, res: Response, next: NextFunction): void {
+    this.serviceFactory.getSensorLocationService()
+      .flatMap(svc => svc.getSensors(req.params.id))
+      .subscribe(
+        sensors => res.json({
+          success: true,
+          sensors: sensors
+        }),
+        err => AxiosHelper.handleError(err, res));
+  }
+
+  public addSensor(req: Request, res: Response, next: NextFunction): void {
+    if (!req.body.sensorId) {
+      res.status(400).json({
+        success: false,
+        message: "Missing mandatory sensorId in body"
+      });
+      return;
+    }
+
+    if (!req.body.from) {
+      res.status(400).json({
+        success: false,
+        message: "Missing mandatory from in body"
+      });
+      return;
+    }
+
+    this.serviceFactory.getSensorLocationService()
+      .flatMap(svc => svc.addSensorToZone(req.params.id, req.body.sensorId, req.body.from, req.body.to))
+      .subscribe(
+        success => {
+          if (success) {
+            res.status(201).json({
+              success: true,
+              message: "Sensor successfully added to zone"
+            });
+          } else {
+            res.status(500).json({
+              success: false,
+              message: "Could not add sensor to zone"
             });
           }
         },
