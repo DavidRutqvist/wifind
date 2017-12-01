@@ -220,7 +220,7 @@ func getIntervalByTime(i *Instances) func(w http.ResponseWriter, r *http.Request
 				intervalsWithin += allIntervals[i]
 			}
 		}
-        if interval.name == "" {
+        if intervalsWithin[0].name == "" {
 			response = PostRes{Success: false, Message: "Interval not found"}
 			json.NewEncoder(buffer).Encode(response)
 			respBody := buffer.Bytes()
