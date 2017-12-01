@@ -20,7 +20,7 @@ job "gateway" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/gateway:0.0.2"
+        image = "docker.adventic.se/wifind/gateway:0.0.3"
 
         port_map {
           http = 3000

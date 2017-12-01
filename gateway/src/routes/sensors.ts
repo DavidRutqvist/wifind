@@ -32,6 +32,10 @@ export class SensorsRoute {
       new SensorsRoute(serviceFactory).getSensorOccupancy(req, res, next);
     });
 
+    router.get("/sensors/:id/observations", (req: Request, res: Response, next: NextFunction) => {
+      new SensorsRoute(serviceFactory).getSensorObservations(req, res, next);
+    });
+
     router.get("/sensors/:id/locations", (req: Request, res: Response, next: NextFunction) => {
       new SensorsRoute(serviceFactory).getSensorLocations(req, res, next);
     });
@@ -51,14 +55,10 @@ export class SensorsRoute {
   }
 
   public getSensor(req: Request, res: Response, next: NextFunction): void {
-    this.serviceFactory.getDatastoreService()
-      .flatMap(svc => svc.getSensor(req.params.id))
-      .subscribe(
-          sensor => res.json({
-              success: true,
-              sensor: sensor
-          }),
-          err => AxiosHelper.handleError(err, res));
+    res.status(500).json({
+      success: false,
+      message: "Not yet implemented"
+    });
   }
 
   public getSensorLocations(req: Request, res: Response, next: NextFunction): void {
@@ -74,4 +74,16 @@ export class SensorsRoute {
       message: "Not yet implemented"
     });
   }
+
+  public getSensorObservations(req: Request, res: Response, next: NextFunction): void {
+    this.serviceFactory.getDatastoreService()
+      .flatMap(svc => svc.getSensor(req.params.id))
+      .subscribe(
+          sensor => res.json({
+              success: true,
+              sensor: sensor
+          }),
+          err => AxiosHelper.handleError(err, res));
+  }
+
 }
