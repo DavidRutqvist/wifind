@@ -1,0 +1,35 @@
+{
+  "name": "ts-service",
+  "version": "1.1.1",
+  "description": "A service description",
+  "author": "David Rutqvist <david.rutqvist@bnearit.se> (http://bnearit.se)",
+  "scripts": {
+    "dev": "SET NODE_ENV=development && nodemon ./bin/www",
+    "grunt": "grunt",
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "errorhandler": "^1.5.0",
+    "express": "^4.15.3",
+    "mongoose": "^4.13.4",
+    "morgan": "^1.8.2",
+    "mssql": "^4.0.4",
+    "q": "^1.5.1",
+    "rxjs": "^5.4.1",
+    "winston": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.16.3",
+    "@types/errorhandler": "0.0.30",
+    "@types/mongodb": "^2.2.16",
+    "@types/mongoose": "^4.7.28",
+    "@types/morgan": "^1.7.32",
+    "@types/node": "^8.0.1",
+    "@types/winston": "^2.3.7",
+    "grunt": "^1.0.1",
+    "grunt-contrib-watch": "^1.0.0",
+    "grunt-ts": "^6.0.0-beta.16",
+    "typescript": "2.3.4"
+  }
+}
