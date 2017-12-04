@@ -33,12 +33,8 @@ export class TopNavbarComponent implements OnInit {
 
 	setTheme() {
 			this.themes.setTheme(this.currentTheme);
-	}
-	toggleProfile(){
-		this.config.profile.isProfileVisible = !this.config.profile.isProfileVisible;
-		this._state.notifyDataChanged("profile.isProfileVisible", this.config.profile.isProfileVisible);
-		return false;
-	}
+  }
+  
 	toggleMenuSideabar() {
 		this.config.appLayout.isApp_SidebarLeftCollapsed = !this.config.appLayout.isApp_SidebarLeftCollapsed;
 		this._state.notifyDataChanged("app.isCollapsed", this.config.appLayout.isApp_SidebarLeftCollapsed);

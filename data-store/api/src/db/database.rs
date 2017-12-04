@@ -97,7 +97,9 @@ impl DB {
     pub fn get_sensors(&self) -> serde_json::Value {
         let result = self.query("show tag values with key=sensor");
 
-        json!(result)
+        json!(result.iter()
+            .map(|obj| obj["value"].clone())
+            .collect::<Vec<serde_json::Value>>())
     }
 
     pub fn get_sensor(&self, sensor_id: String) -> serde_json::Value {
