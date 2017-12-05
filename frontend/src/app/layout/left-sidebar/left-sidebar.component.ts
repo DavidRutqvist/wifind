@@ -35,6 +35,16 @@ export class LeftSidebarComponent implements OnInit {
 			label: "Dashboard",
 			link: "/dashboard",
 			icon: "zmdi zmdi-view-dashboard"
+		},
+		{
+			label: "Management",
+			icon: "zmdi zmdi-settings",
+			children: [
+				{
+					label: "Install Unit",
+					link: "/management/install-unit"
+				}
+			]
 		}
 	];
 

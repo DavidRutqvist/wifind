@@ -1,0 +1,68 @@
+<div id="content_wrapper" class="fullWidth3-wrapper">
+	<div class="content">
+		<div class="header-wrapper header-sm">
+			<header class="container-fluid">
+				<div class="row">
+					<div class="col">
+						<h1>Install Unit</h1>
+					</div>
+				</div>
+			</header>
+		</div>
+		<div class="content-body">
+      <div class="row row-eq-height flex-card">
+        <div class="col-lg col-lg-6 col-md-8">
+          <div class="card">
+            <div class="card-block p-b-50">
+              <form class="form-horizontal">
+                <div class="form-group row">
+                  <div class="col">
+                    <md-select class="block" name="unit" placeholder="Unit" [(ngModel)]="selectedUnit" [required]="true" [disabled]="isUnitsLoading" [floatPlaceholder]="true" #unitControl="ngModel">
+                      <md-option *ngFor="let unit of units" [value]="unit">
+                        {{ unit }}
+                      </md-option>
+                    </md-select>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <div class="col">
+                    <md-input-container floatPlaceholder="auto" class="float-auto">
+                      <input mdInput placeholder="Name" class="form-control" type="text">
+                    </md-input-container>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <div class="col">
+                    <md-input-container floatPlaceholder="auto" class="float-auto">
+                      <input mdInput placeholder="Email" class="form-control" type="email">
+                    </md-input-container>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <div class="col">
+                    <md-input-container floatPlaceholder="auto" class="float-auto">
+                      <input mdInput placeholder="Password" class="form-control" type="password">
+                    </md-input-container>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <div class="col">
+                    <md-input-container floatPlaceholder="auto" class="float-auto">
+                      <textarea mdInput placeholder="Textarea" class="form-control"></textarea>
+                    </md-input-container>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+						<div class="card-footer text-right">
+              <button md-ripple class="btn btn-primary btn-flat">Cancel</button>
+              <button md-ripple class="btn btn-primary">Submit</button>
+            </div>
+          </div>
+        </div>
+			</div>
+		</div>
+	</div>
+</div>
+<footer id="footer_wrapper" class="footer_wrapper"></footer>
