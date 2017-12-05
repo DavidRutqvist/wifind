@@ -24,6 +24,10 @@ job "rabbit" {
       config {
         image = "rabbitmq:3-management-alpine"
 
+        volumes = [
+          "/mnt/rabbit:/var/lib/rabbitmq/mnesia"
+        ]
+
         port_map {
           amqp = 5672
           management = 15672
