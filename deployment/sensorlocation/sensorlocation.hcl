@@ -1,4 +1,4 @@
-job "gateway" {
+job "sensorlocation" {
   datacenters = ["dc1"]
   type        = "service"
 
@@ -6,9 +6,8 @@ job "gateway" {
     max_parallel = 1
   }
 
-  group "gateway" {
-    count = 2
-
+  group "sensorlocation" {
+    count = 1
     restart {
       attempts = 10
       interval = "5m"
@@ -16,15 +15,42 @@ job "gateway" {
       mode     = "delay"
     }
 
-    task "gateway" {
+    task "mongo" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/gateway:0.0.4"
+        image = "mongo:3.0"
+        volumes = [
+          "/mnt/sensorlocation/mongo:/data/db"
+        ]
+
+        port_map {
+          mongo = 27017
+        }
+      }
+
+      resources {
+        cpu    = 256 # 256 MHz
+        memory = 1024 # 1GB
+
+        network {
+          mbits = 10
+
+          port "mongo" {}
+        }
+      }
+    }
+
+    task "service" {
+      driver = "docker"
+
+      config {
+        image = "docker.adventic.se/wifind/sensorlocation:1.1.1"
 
         port_map {
           http = 3000
         }
+
         ssl = true
         auth {
               username = "nomad"
@@ -34,7 +60,7 @@ job "gateway" {
       }
 
       env {
-        "CONSUL_ADDR" = "${attr.unique.network.ip-address}:8500"
+        "MONGO_CONNECTION_STRING" = "mongodb://${NOMAD_ADDR_mongo_mongo}/sensorlocation"
       }
 
       resources {
@@ -49,8 +75,8 @@ job "gateway" {
       }
 
       service {
-        name = "gateway"
-        tags = ["http", "urlprefix-api.wifind.se:9999/"]
+        name = "sensorlocation"
+        tags = ["http"]
         port = "http"
 
         check {
@@ -59,7 +85,7 @@ job "gateway" {
           interval = "10s"
           timeout  = "2s"
           port     = "http"
-          path     = "/api"
+          path     = "/"
         }
       }
     }
