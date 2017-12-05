@@ -70,8 +70,10 @@ type Instances struct {
 	Consul *api.Client
 	RabbitConn *amqp.Connection
 	RabbitChan *amqp.Channel
+	ExchangeTopic string
+	RabbitEndpoint string
 }
-func createInstances(mongoAddress string, consulAddress string) *Instances {
+func createInstances(mongoAddress string, consulAddress string, exchangedTopic string) *Instances {
 	var instances *Instances = new(Instances)
 
 	fmt.Printf("Connecting to MongoDB at: %v\n", mongoAddress)
@@ -96,6 +98,7 @@ func createInstances(mongoAddress string, consulAddress string) *Instances {
 	rabbitAddress := service.Address
 	rabbitPort := service.ServicePort
 	rabbitEndpoint := fmt.Sprintf("amqp://" + rabbitAddress)
+	instances.RabbitEndpoint = rabbitEndpoint
 	fmt.Printf("Connecting to RabbitMQ at: %v:%v\n", rabbitAddress, rabbitPort)
 	connection, err := amqp.Dial(rabbitEndpoint)
 	failOnError(err, "Failed to connect to RabbitMQ\n")
@@ -106,6 +109,7 @@ func createInstances(mongoAddress string, consulAddress string) *Instances {
 
 	instances.RabbitConn = connection
 	instances.RabbitChan = channel
+	instances.ExchangeTopic = exchangedTopic
 
 	
 	return instances
@@ -114,9 +118,10 @@ func createInstances(mongoAddress string, consulAddress string) *Instances {
 func main() {
 	mongoAddress := os.Getenv("MONGO_ADDRESS")
 	consulAddress := os.Getenv("CONSUL_ADDRESS")
+	exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
 
 	//instances := createInstances(mongoAddress, "srv.wifind.se:8500")
-	instances := createInstances(mongoAddress, consulAddress)
+	instances := createInstances(mongoAddress, consulAddress, exchangedTopic)
 
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/intervals"), allIntervals(instances))
@@ -520,13 +525,18 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
     }
 }
 func (i *Instances) Recieve() {
-        conn, err := amqp.Dial(i.rabbitEndpoint)
+        conn, err := amqp.Dial(i.RabbitEndpoint) //Localhost?
         failOnError(err, "Failed to connect to RabbitMQ")
         defer conn.Close()
 
         channel, err := conn.Channel()
         failOnError(err, "Failed to open a channel")
         defer channel.Close()
+
+        session := i.Session.Copy()
+			defer session.Close()
+
+        var interval Interval
 
         err = channel.ExchangeDeclare(
                 i.ExchangeTopic, // name
@@ -555,17 +565,17 @@ func (i *Instances) Recieve() {
         }
         for _, s := range os.Args[1:] {
                 log.Printf("Binding queue %s to exchange %s with routing key %s",
-                        q.Name, "logs_topic", s)
-                err = ch.QueueBind(
+                        q.Name, i.ExchangeTopic, s)
+                err = channel.QueueBind(
                         q.Name,       // queue name
                         s,            // routing key
-                        "logs_topic", // exchange
+                        i.ExchangeTopic, // exchange
                         false,
                         nil)
                 failOnError(err, "Failed to bind a queue")
         }
 
-        msgs, err := ch.Consume(
+        msgs, err := channel.Consume(
                 q.Name, // queue
                 "",     // consumer
                 true,   // auto ack
@@ -576,14 +586,16 @@ func (i *Instances) Recieve() {
         )
         failOnError(err, "Failed to register a consumer")
 
-        forever := make(chan bool)
-
         go func() {
-                for d := range msgs {
-                        log.Printf(" [x] %s", d.Body)
-                }
-        }()
+            for d := range msgs {
+                decoder := json.NewDecoder(bytes.NewReader(d.Body))
+		        err = decoder.Decode(&interval)
 
-        log.Printf(" [*] Waiting for logs. To exit press CTRL+C")
-        <-forever
+		        c := session.DB("store").C("intervals")
+    			err = c.Insert(interval)
+
+
+
+            	}	
+        }()
 }
