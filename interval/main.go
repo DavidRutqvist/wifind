@@ -63,7 +63,7 @@ type Datastore struct {
 	device string `json:"device" bson:"device"`
 	sensor string `json:"sensor" bson:"sensor"`
 	rssi int32 `json:"rssi" bson:"rssi"`
-	time time.Time `json:"time" bson:"time"`
+	time int32 `json:"time" bson:"time"`
 }
 type Instances struct {
 	Session *mgo.Session
@@ -480,6 +480,7 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
         ResponseWithJSON(w, respBody, http.StatusOK)
     }
 }
+
 func (i *Instances) Recieve() {
         conn, err := amqp.Dial(i.RabbitEndpoint) //Localhost?
         failOnError(err, "Failed to connect to RabbitMQ")
@@ -494,9 +495,6 @@ func (i *Instances) Recieve() {
 
         //var interval Interval'
 		
-
-
-		fmt.Println("d")
         err = channel.ExchangeDeclare(
                 i.ExchangeTopic, // name
                 "topic",      // type
@@ -510,14 +508,14 @@ func (i *Instances) Recieve() {
 
         q, err := channel.QueueDeclare(
                 "",    // name
-                false, // durable
+                true, // durable
                 false, // delete when usused
                 true,  // exclusive
                 false, // no-wait
                 nil,   // arguments
         )
         failOnError(err, "Failed to declare a queue")
-
+        fmt.Printf("queue name: %v\nroutingkey: %v\nexchange: %v\n", q.Name, i.SubscriptionTopic, i.ExchangeTopic)
         err = channel.QueueBind(
                 q.Name,       // queue name
                 i.SubscriptionTopic,     // routing key
@@ -526,29 +524,38 @@ func (i *Instances) Recieve() {
                 nil)
         failOnError(err, "Failed to bind a queue")
         
-
         msgs, err := channel.Consume(
                 q.Name, // queue
                 "",     // consumer
                 true,   // auto ack
-                false,  // exclusive
+                true,  // exclusive
                 false,  // no local
                 false,  // no wait
                 nil,    // args
         )
         failOnError(err, "Failed to register a consumer")
-
+        forever := make(chan bool)
         go func() {
         	var datastore Datastore
-			var sensorlocation SensorLocation
+			//var sensorlocation SensorLocation
             for d := range msgs {
-            	fmt.Println("sd")
-            	fmt.Println(d)
             	
-                decoder := json.NewDecoder(bytes.NewReader(d.Body))
-		        err = decoder.Decode(&datastore)
-				sensorid := datastore.sensor
+                /*decoder := json.NewDecoder(bytes.NewReader(d.Body))
+		        err = decoder.Decode(&datastore)*/
+		        //body, err := ioutil.ReadAll(d.Body)
+		        err := json.Unmarshal(d.Body, &datastore)
+				//sensorid := datastore.sensor
+				//err := json.NewDecoder(bytes.NewReader(d.Body)).Decode(&datastore)
+				if err != nil{
+					failOnError(err, "fel")
+				}
+				fmt.Printf("%s\n", d.Body)
+				fmt.Printf("%s\n", datastore.device)
+				fmt.Printf("%s\n", datastore.sensor)
+				fmt.Printf("%s\n", datastore.rssi)
 
+
+				/*
 				resp, err := http.Get("http://app.wifind.se:9999/api/sensors/"+sensorid)
 				sensordecoder := json.NewDecoder(resp.Body)
 				err = sensordecoder.Decode(&sensorlocation)
@@ -563,12 +570,15 @@ func (i *Instances) Recieve() {
 				interval.zone = bson.ObjectId(zoneid)
 				interval.deviceid = datastore.device
 				interval.rssi = datastore.rssi
+				interval.from = datastore.time
 
 
-
+			
 		        c := session.DB("store").C("intervals")
-    			err = c.Insert(interval)
+    			err = c.Insert(interval)//*/
             	}	
         	}()
         	log.Printf(" [*] Waiting for stuffs. To exit press CTRL+C")
+        	<-forever
+
 }
