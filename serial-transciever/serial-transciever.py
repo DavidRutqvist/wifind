@@ -58,7 +58,7 @@ def main(args):
             timestamp = int(time.time())
             deviceID = hashlib.sha256(b[0]).hexdigest()
             rssi = b[1]
-            sensorID = hashlib.sha256(c[0]).hexdigest()
+            sensorID = c[0]
             if(not lookupTable.has_key(deviceID)):
                 lookupTable[deviceID] = timestamp
                 send = True
