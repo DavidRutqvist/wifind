@@ -1,6 +1,6 @@
 {
 	"name": "wifind",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"license": "MIT",
 	"scripts": {
 		"ng": "ng",
@@ -41,6 +41,7 @@
 		"ngu-utility": "^1.0.3",
 		"ngx-malihu-scrollbar": "^1.2.1",
 		"rxjs": "^5.4.3",
+		"sweetalert2": "^7.0.7",
 		"ts-helper": "0.0.1",
 		"web-animations-js": "^2.3.1",
 		"zone.js": "^0.8.17"
