@@ -48,8 +48,8 @@ type Interval struct {
 	sensorid string `bson:"sensormac" json:"sensormac"`
 	from time.Time `bson:"from" json:"from"` 
 	to time.Time `bson:"to" json:"to"`
-	zone string `bson:"zone" json:"zone"`
-	rssi uint32 `bson:"rssi" json:"rssi"`
+	zone bson.ObjectId `bson:"zone" json:"zone"`
+	rssi int32 `bson:"rssi" json:"rssi"`
 
 }
 type Zone struct {
@@ -59,7 +59,7 @@ type Zone struct {
 	Children []bson.ObjectId	 `json:"children" bson:"children,omitempty"`
 	Parent bson.ObjectId `json:"parent" bson:"parent,omitempty"`
 }
-type datastore struct {
+type Datastore struct {
 	device string `json:"device" bson:"device"`
 	sensor string `json:"sensor" bson:"sensor"`
 	rssi int32 `json:"rssi" bson:"rssi"`
@@ -72,8 +72,9 @@ type Instances struct {
 	RabbitChan *amqp.Channel
 	ExchangeTopic string
 	RabbitEndpoint string
+	SubscriptionTopic string
 }
-func createInstances(mongoAddress string, consulAddress string, exchangedTopic string) *Instances {
+func createInstances(mongoAddress string, consulAddress string, exchangedTopic string, SubscriptionTopic string) *Instances {
 	var instances *Instances = new(Instances)
 
 	fmt.Printf("Connecting to MongoDB at: %v\n", mongoAddress)
@@ -110,6 +111,7 @@ func createInstances(mongoAddress string, consulAddress string, exchangedTopic s
 	instances.RabbitConn = connection
 	instances.RabbitChan = channel
 	instances.ExchangeTopic = exchangedTopic
+	instances.SubscriptionTopic = SubscriptionTopic
 
 	
 	return instances
@@ -117,11 +119,13 @@ func createInstances(mongoAddress string, consulAddress string, exchangedTopic s
 
 func main() {
 	mongoAddress := os.Getenv("MONGO_ADDRESS")
-	consulAddress := os.Getenv("CONSUL_ADDRESS")
-	exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
+	//consulAddress := os.Getenv("CONSUL_ADDRESS")
+	consulAddress := "srv.wifind.se:8500"
+	//exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
+	exchangedTopic := "event"
 
 	//instances := createInstances(mongoAddress, "srv.wifind.se:8500")
-	instances := createInstances(mongoAddress, consulAddress, exchangedTopic)
+	instances := createInstances(mongoAddress, consulAddress, exchangedTopic, "sensor.*.detected.*")
 
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/intervals"), allIntervals(instances))
@@ -133,58 +137,10 @@ func main() {
 	mux.HandleFunc(pat.Get("/intervals/device/:zonename"), getIntervalForDeviceInZone(instances))
 	mux.HandleFunc(pat.Get("/"), healthCheck(instances))
 	fmt.Printf("Starting Router\n")
+	go instances.Recieve()
     http.ListenAndServe("0.0.0.0:8080", mux)
 
 }
-/*func (i *Instances) readFromZones(sensorid string) bson.ObjectId{
-
-	address,_, err := i.Consul.Catalog.Service("sensorlocation")
-	resp, err := http.Get(address[0]+"/sensors/"+sensorid)
-	if err != nil {
-		failOnError(err, "Read from Zones failed")
-	}
-	defer resp.Body.Close()
-	
-	var m SensorLocation
-	body, err := ioutil.ReadAll(resp.Body)
-	errjson :=json.Unmarshal(body,&m)
-	if errjson != nil {
-		failOnError(err, "Decode from Zones failed")
-	}
-	return m.zoneid
-}
-func (i *Instances) readFromZonesMeta(zoneid string) string{
-	address,_, err := i.Consul.Catalog.Service("zones")
-	resp, err := http.Get(address[0]+"/zones/"+zoneid)
-	if err != nil {
-		failOnError(err, "Read from Zones failed")
-	}
-	defer resp.Body.Close()
-	
-	var m Zone
-	body, err := ioutil.ReadAll(resp.Body)
-	errjson :=json.Unmarshal(body,&m)
-	if errjson != nil {
-		failOnError(err, "Decode from Zones failed")
-	}
-	return m.Name
-}
-func (i *Instances) readFromDataStore() datastore{
-	address,_, err := i.Consul.Catalog.Service("datastore")
-	resp, err := http.Get(address[0]+"/sensor")
-	if err != nil {
-		failOnError(err, "Read from Datastore failed")
-	}
-	defer resp.Body.Close()
-	
-	var m datastore
-	body, err := ioutil.ReadAll(resp.Body)
-	errjson :=json.Unmarshal(body,&m)
-	if errjson != nil {
-		failOnError(err, "Decode from Datastore failed")
-	}
-	return m
-}*/
 func healthCheck(i *Instances) func(w http.ResponseWriter, r *http.Request) {  
     return func(w http.ResponseWriter, r *http.Request) {
 		requestDump, err := httputil.DumpRequest(r, false)
@@ -536,8 +492,11 @@ func (i *Instances) Recieve() {
         session := i.Session.Copy()
 			defer session.Close()
 
-        var interval Interval
+        //var interval Interval'
+		
 
+
+		fmt.Println("d")
         err = channel.ExchangeDeclare(
                 i.ExchangeTopic, // name
                 "topic",      // type
@@ -559,21 +518,14 @@ func (i *Instances) Recieve() {
         )
         failOnError(err, "Failed to declare a queue")
 
-        if len(os.Args) < 2 {
-                log.Printf("Usage: %s [binding_key]...", os.Args[0])
-                os.Exit(0)
-        }
-        for _, s := range os.Args[1:] {
-                log.Printf("Binding queue %s to exchange %s with routing key %s",
-                        q.Name, i.ExchangeTopic, s)
-                err = channel.QueueBind(
-                        q.Name,       // queue name
-                        s,            // routing key
-                        i.ExchangeTopic, // exchange
-                        false,
-                        nil)
-                failOnError(err, "Failed to bind a queue")
-        }
+        err = channel.QueueBind(
+                q.Name,       // queue name
+                i.SubscriptionTopic,     // routing key
+                i.ExchangeTopic, // exchange
+                false,
+                nil)
+        failOnError(err, "Failed to bind a queue")
+        
 
         msgs, err := channel.Consume(
                 q.Name, // queue
@@ -587,15 +539,36 @@ func (i *Instances) Recieve() {
         failOnError(err, "Failed to register a consumer")
 
         go func() {
+        	var datastore Datastore
+			var sensorlocation SensorLocation
             for d := range msgs {
+            	fmt.Println("sd")
+            	fmt.Println(d)
+            	
                 decoder := json.NewDecoder(bytes.NewReader(d.Body))
-		        err = decoder.Decode(&interval)
+		        err = decoder.Decode(&datastore)
+				sensorid := datastore.sensor
+
+				resp, err := http.Get("http://app.wifind.se:9999/api/sensors/"+sensorid)
+				sensordecoder := json.NewDecoder(resp.Body)
+				err = sensordecoder.Decode(&sensorlocation)
+				if err != nil{
+					failOnError(err, "didn't get data")
+
+				}
+				zoneid := sensorlocation.zoneid
+				
+				var interval *Interval = new(Interval)
+				interval.sensorid = sensorid
+				interval.zone = bson.ObjectId(zoneid)
+				interval.deviceid = datastore.device
+				interval.rssi = datastore.rssi
+
+
 
 		        c := session.DB("store").C("intervals")
     			err = c.Insert(interval)
-
-
-
             	}	
-        }()
+        	}()
+        	log.Printf(" [*] Waiting for stuffs. To exit press CTRL+C")
 }
