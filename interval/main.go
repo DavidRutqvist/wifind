@@ -49,7 +49,7 @@ type Interval struct {
 	Sensorid string        `bson:"sensormac" json:"sensormac"`
 	From     time.Time     `bson:"from" json:"from"`
 	To       time.Time     `bson:"to" json:"to"`
-	Zone     bson.ObjectId `bson:"zone" json:"zone"`
+	Zone     string `bson:"zone" json:"zone"`
 	Rssi     int32         `bson:"rssi" json:"rssi"`
 }
 type Zone struct {
@@ -94,7 +94,7 @@ func createInstances(mongoAddress string, consulAddress string, exchangedTopic s
 	fmt.Printf("Retrieving RabbitMQ service\n")
 	catalog := consul.Catalog()
 	services, _, err := catalog.Service("rabbit", "", nil)
-	failOnError(err, "Failed to retrive RabbitMQ from Consul\n")
+	failOnError(err, "Failed to retrieve RabbitMQ from Consul\n")
 
 	service := services[0]
 	rabbitAddress := service.Address
@@ -120,7 +120,7 @@ func CreateInterval(sensorlocation SensorLocation, datastore Datastore) *Interva
 	var interval Interval
 	interval.Id = bson.NewObjectId()
 	interval.Sensorid = datastore.Sensor
-	interval.Zone = bson.ObjectId(sensorlocation.Zoneid)
+	interval.Zone = sensorlocation.Zoneid
 	interval.Deviceid = datastore.Device
 	interval.Rssi = datastore.Rssi
 	interval.From = time.Unix(datastore.Time, 0)
@@ -130,7 +130,7 @@ func CreateInterval(sensorlocation SensorLocation, datastore Datastore) *Interva
 func main() {
 	mongoAddress := os.Getenv("MONGO_ADDRESS")
 	//consulAddress := os.Getenv("CONSUL_ADDRESS")
-	consulAddress := "srv.wifind.se:8500"
+	consulAddress := "http://srv.wifind.se:8500"
 	//exchangedTopic := os.Getenv("EXCHANGE_TOPIC")
 	exchangedTopic := "event"
 
@@ -490,33 +490,31 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
 		ResponseWithJSON(w, respBody, http.StatusOK)
 	}
 }
-func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *Interval {
+func (i *Instances) Update (datastore Datastore, sensorlocation SensorLocation) *Interval {
 	session := i.Session.Copy()
 		defer session.Close()
 	var interval *Interval
+	then := time.Unix(datastore.Time, 0)
+	duration := time.Since(then)
 	c := session.DB("store").C("intervals")
-	err := c.Find(bson.M{"_deviceid": datastore.Device}).One(&interval)
+	err := c.Find(bson.M{"_deviceid": datastore.Device}).One(&interval) //hämta senaste intervall för (mobil) enhet
 	if err != nil{
-		failOnError(err, "Cant find interval\n")
-	}else{
-		interval = CreateInterval(sensorlocation, datastore)
+		//failOnError(err, "Cant find interval\n")
+		interval = CreateInterval(sensorlocation, datastore) //finns inget - skapa nytt
 		err = c.Insert(interval)
 		failOnError(err, "Failed to insert interval\n")
-	}
-	if !interval.Zone.equals(bson.ObjectId(sensorlocation.Zoneid)){
+	}else if interval.Zone != sensorlocation.Zoneid{ //senaste intervall fel zon - skapa nytt
 		interval = CreateInterval(sensorlocation, datastore)
 		err = c.Insert(interval)
 		failOnError(err, "Failed to insert interval time\n")
-	}
-	then, err := time.Parse(interval.To, datastore.Time)
-	failOnError(err, "Timestamp failed")
-	duration := time.Since(then)
-	if duration.Minutes() > 5{
-		interval = CreateInterval(sensorlocation, datastore)
-		interval.To = time.Now()
-		err = c.Insert(interval)
+	}else if duration.Minutes() > 5{ //senaste intervall to värdet för länge sedan - skapa nytt
+		interval.To = time.Now() // updatera to värdet till nu
+		newinterval := new(Interval)
+		newinterval = CreateInterval(sensorlocation, datastore)
+		err = c.Insert(newinterval)
 		failOnError(err, "Failed to insert interval\n")
 	}
+	return interval
 }
 func (i *Instances) Recieve() {
 	conn, err := amqp.Dial(i.RabbitEndpoint)
@@ -593,10 +591,7 @@ func (i *Instances) Recieve() {
 			err := json.Unmarshal(d.Body, &datastore)
 			failOnError(err, "Failed to unmarshal event.\n")
 
-			fmt.Printf("%s\n", d.Body)
-			fmt.Printf("%s\n", datastore.Device)
-			fmt.Printf("%s\n", datastore.Sensor)
-			fmt.Printf("%v\n", datastore.Rssi)
+			
 
 			resp, err := http.Get(service + "/sensors/" + datastore.Sensor)
 			failOnError(err, "Failed to get sensorlocation.\n")
@@ -604,8 +599,13 @@ func (i *Instances) Recieve() {
 			err = decoder.Decode(&sensorlocation)
 			failOnError(err, "didn't get data\n")
 
-			i, err := Update(datastore, sensorlocation)
+			i := i.Update(datastore, sensorlocation)
 			failOnError(err, "Interval update fail")
+			fmt.Printf("%s\n", i.Zone)
+			fmt.Printf("%s\n", i.Deviceid)
+			fmt.Printf("%s\n", i.From)
+			fmt.Printf("%v\n", i.To)
+			fmt.Printf("%v\n", i.Rssi)
 
 			/*
 				hämta senaste intervall för (mobil) enhet
@@ -628,6 +628,6 @@ func (i *Instances) Recieve() {
 
 }
 
-func (i *Interval) Print() {
+/*func (i *Interval) Print() {
 	fmt.Printf("%v\n%v\n%v\n%v\n", i.Sensorid, i.Zone.String(), i.Deviceid, i.Id.String())
-}
+}*/
