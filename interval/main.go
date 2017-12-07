@@ -45,19 +45,10 @@ type SensorLocation struct {
 
 type Interval struct {
 	Id       bson.ObjectId `json:"id" bson:"_id,omitempty"`
-	Deviceid string        `bson:"devicemac" json:"devicemac"`
-	Sensorid string        `bson:"sensormac" json:"sensormac"`
+	Deviceid string        `bson:"deviceId" json:"deviceId"`
 	From     time.Time     `bson:"from" json:"from"`
 	To       time.Time     `bson:"to" json:"to"`
-	Zone     string `bson:"zone" json:"zone"`
-	Rssi     int32         `bson:"rssi" json:"rssi"`
-}
-type Zone struct {
-	Id       bson.ObjectId   `json:"id" bson:"_id,omitempty"`
-	Name     string          `json:"name"`
-	Location []float64       `json:"location"`
-	Children []bson.ObjectId `json:"children" bson:"children,omitempty"`
-	Parent   bson.ObjectId   `json:"parent" bson:"parent,omitempty"`
+	Zone     string 	   `bson:"zoneId" json:"zoneId"`
 }
 type Datastore struct {
 	Device string `json:"device" bson:"device"`
@@ -119,10 +110,8 @@ func createInstances(mongoAddress string, consulAddress string, exchangedTopic s
 func CreateInterval(sensorlocation SensorLocation, datastore Datastore) *Interval{
 	var interval Interval
 	interval.Id = bson.NewObjectId()
-	interval.Sensorid = datastore.Sensor
 	interval.Zone = sensorlocation.Zoneid
 	interval.Deviceid = datastore.Device
-	interval.Rssi = datastore.Rssi
 	interval.From = time.Unix(datastore.Time, 0)
 	interval.To = time.Unix(datastore.Time, 0)
 	return &interval
@@ -140,11 +129,11 @@ func main() {
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/intervals"), allIntervals(instances))
 	mux.HandleFunc(pat.Get("/intervals/:at"), getIntervalByTime(instances))
-	mux.HandleFunc(pat.Get("/intervals/zones/:zonename"), getIntervalByZoneName(instances))
-	mux.HandleFunc(pat.Get("/intervals/zones/:zonename/:from/:to"), getIntervalByZoneNameDuringInterval(instances))
-	mux.HandleFunc(pat.Get("/intervals/zones/:zonename/:at"), getIntervalForZoneByTime(instances))
-	mux.HandleFunc(pat.Get("/intervals/device/:deviceid"), getIntervalByDeviceID(instances))
-	mux.HandleFunc(pat.Get("/intervals/device/:zonename"), getIntervalForDeviceInZone(instances))
+	mux.HandleFunc(pat.Get("/intervals/zones/:zoneid"), getIntervalByZoneName(instances))
+	mux.HandleFunc(pat.Get("/intervals/zones/:zoneid/:from/:to"), getIntervalByZoneNameDuringInterval(instances))
+	mux.HandleFunc(pat.Get("/intervals/zones/:zoneid/:at"), getIntervalForZoneByTime(instances))
+	//mux.HandleFunc(pat.Get("/intervals/device/:deviceid"), getIntervalByDeviceID(instances))
+	//mux.HandleFunc(pat.Get("/intervals/device/:zoneid"), getIntervalForDeviceInZone(instances))
 	mux.HandleFunc(pat.Get("/"), healthCheck(instances))
 	fmt.Printf("Starting Router\n")
 	go instances.Recieve()
@@ -220,9 +209,8 @@ func getIntervalByTime(i *Instances) func(w http.ResponseWriter, r *http.Request
 		tm := time.Unix(i, 0)
 
 		c := session.DB("store").C("intervals")
-		var allIntervals []Interval
-		var intervalsWithin []Interval
-		err = c.Find(bson.M{}).All(&allIntervals)
+		var intervalsWithin = make([]Interval, 0)
+		err = c.Find(bson.M{"from": bson.M{"$lte": tm}, "$or": []bson.M{bson.M{"to": bson.M{"$gte": tm}}, bson.M{"to": bson.M{"$exists": false}}}}).All(&intervalsWithin)
 		if err != nil {
 			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
@@ -230,18 +218,7 @@ func getIntervalByTime(i *Instances) func(w http.ResponseWriter, r *http.Request
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
 			return
 		}
-		for i := 0; i < len(allIntervals); i++ {
-			if allIntervals[i].From.Before(tm) && allIntervals[i].To.After(tm) {
-				intervalsWithin = append(intervalsWithin, allIntervals[i])
-			}
-		}
-		if intervalsWithin[0].Zone == "" {
-			response = PostRes{Success: false, Message: "Interval not found"}
-			json.NewEncoder(buffer).Encode(response)
-			respBody := buffer.Bytes()
-			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
-			return
-		}
+
 		respBody, err = json.MarshalIndent(intervalsWithin, "", "  ")
 		if err != nil {
 			log.Fatal(err)
@@ -263,22 +240,14 @@ func getIntervalByZoneName(i *Instances) func(w http.ResponseWriter, r *http.Req
 		var response PostRes
 		var respBody []byte
 
-		name := bson.ObjectIdHex(pat.Param(r, "zonename"))
+		zoneid := bson.ObjectIdHex(pat.Param(r, "zoneid"))
 
 		c := session.DB("store").C("intervals")
 
-		var intervals []Interval
-		err = c.Find(bson.M{"_name": name}).All(&intervals)
+		intervals := make([]Interval, 0)
+		err = c.Find(bson.M{"zoneId": zoneid}).All(&intervals)
 		if err != nil {
 			response = PostRes{Success: false, Message: "Database error"}
-			json.NewEncoder(buffer).Encode(response)
-			respBody := buffer.Bytes()
-			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
-			return
-		}
-
-		if intervals[0].Zone == "" {
-			response = PostRes{Success: false, Message: "Interval not found"}
 			json.NewEncoder(buffer).Encode(response)
 			respBody := buffer.Bytes()
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
@@ -306,12 +275,12 @@ func getIntervalByDeviceID(i *Instances) func(w http.ResponseWriter, r *http.Req
 		var response PostRes
 		var respBody []byte
 
-		deviceid := bson.ObjectIdHex(pat.Param(r, "deviceid"))
+		deviceid := pat.Param(r, "deviceid")
 
 		c := session.DB("store").C("intervals")
 
 		var intervals []Interval
-		err = c.Find(bson.M{"_deviceid": deviceid}).All(&intervals)
+		err = c.Find(bson.M{"deviceId": deviceid}).All(&intervals)
 		if err != nil {
 			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
@@ -349,13 +318,13 @@ func getIntervalForDeviceInZone(i *Instances) func(w http.ResponseWriter, r *htt
 		var response PostRes
 		var respBody []byte
 
-		name := (pat.Param(r, "zonename"))
-		deviceid := bson.ObjectIdHex(pat.Param(r, "deviceid"))
+		zoneid := (pat.Param(r, "zoneid"))
+		deviceid := pat.Param(r, "deviceid")
 
 		c := session.DB("store").C("intervals")
 
 		var intervals []Interval
-		err = c.Find(bson.M{"_name": name, "_deviceid": deviceid}).All(&intervals)
+		err = c.Find(bson.M{"zoneId": zoneid, "deviceId": deviceid}).All(&intervals)
 		if err != nil {
 			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
@@ -405,12 +374,12 @@ func getIntervalByZoneNameDuringInterval(i *Instances) func(w http.ResponseWrite
 			panic(err)
 		}
 		tmto := time.Unix(y, 0)
-		zonename := (pat.Param(r, "zonename"))
+		zoneid := (pat.Param(r, "zoneid"))
 
 		c := session.DB("store").C("intervals")
 		var timeIntervals []Interval
 		var intervalsWithin []Interval
-		err = c.Find(bson.M{"_zonename": zonename}).All(&timeIntervals)
+		err = c.Find(bson.M{"zoneId": zoneid}).All(&timeIntervals)
 		if err != nil {
 			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
@@ -457,12 +426,12 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
 			panic(err)
 		}
 		tm := time.Unix(i, 0)
-		zonename := (pat.Param(r, "zonename"))
+		zoneid := (pat.Param(r, "zoneid"))
 
 		c := session.DB("store").C("intervals")
 		var timeIntervals []Interval
 		var intervalsWithin []Interval
-		err = c.Find(bson.M{"_zonename": zonename}).All(&timeIntervals)
+		err = c.Find(bson.M{"zoneId": zoneid}).All(&timeIntervals)
 		if err != nil {
 			response = PostRes{Success: false, Message: "Database error"}
 			json.NewEncoder(buffer).Encode(response)
@@ -494,25 +463,38 @@ func (i *Instances) Update (datastore Datastore, sensorlocation SensorLocation) 
 	session := i.Session.Copy()
 		defer session.Close()
 	var interval *Interval
-	then := time.Unix(datastore.Time, 0)
-	duration := time.Since(then)
 	c := session.DB("store").C("intervals")
-	err := c.Find(bson.M{"_deviceid": datastore.Device}).One(&interval) //hämta senaste intervall för (mobil) enhet
-	if err != nil{
-		//failOnError(err, "Cant find interval\n")
-		interval = CreateInterval(sensorlocation, datastore) //finns inget - skapa nytt
-		err = c.Insert(interval)
-		failOnError(err, "Failed to insert interval\n")
-	}else if interval.Zone != sensorlocation.Zoneid{ //senaste intervall fel zon - skapa nytt
-		interval = CreateInterval(sensorlocation, datastore)
-		err = c.Insert(interval)
-		failOnError(err, "Failed to insert interval time\n")
-	}else if duration.Minutes() > 5{ //senaste intervall to värdet för länge sedan - skapa nytt
-		interval.To = time.Now() // updatera to värdet till nu
-		newinterval := new(Interval)
-		newinterval = CreateInterval(sensorlocation, datastore)
-		err = c.Insert(newinterval)
-		failOnError(err, "Failed to insert interval\n")
+
+	if (&sensorlocation != nil) && time.Unix(datastore.Time, 0).Before(sensorlocation.From) && (&(sensorlocation.To) == nil || time.Unix(datastore.Time, 0).After(sensorlocation.To)) {
+		err := c.Find(bson.M{"deviceId": datastore.Device}).One(&interval) //hämta senaste intervall för (mobil) enhet
+		if err != nil{
+			fmt.Println("NO INTERVAL")
+			fmt.Println(err)
+			//failOnError(err, "Cant find interval\n")
+			interval = CreateInterval(sensorlocation, datastore) //finns inget - skapa nytt
+			err = c.Insert(interval)
+			failOnError(err, "Failed to insert interval\n")
+		} else {
+			duration := time.Since(interval.To)
+			if interval.Zone != sensorlocation.Zoneid{ //senaste intervall fel zon - skapa nytt
+				fmt.Println("Different zone")
+				interval = CreateInterval(sensorlocation, datastore)
+				err = c.Insert(interval)
+				failOnError(err, "Failed to insert interval time\n")
+			} else if duration.Minutes() > 5{ //senaste intervall to värdet för länge sedan - skapa nytt
+				fmt.Println("Old interval")
+				interval = CreateInterval(sensorlocation, datastore)
+				err = c.Insert(interval)
+				failOnError(err, "Failed to insert interval time\n")
+			} else { // inom 5 min, uppdatera
+				fmt.Println("----- UPDATE -----")
+				interval.To = time.Unix(datastore.Time, 0) // updatera to värdet till nu
+				err = c.Update(bson.M{"_id": interval.Id}, interval)
+				failOnError(err, "Failed to update interval\n")
+			}
+		}
+	} else {
+		fmt.Println("No zone mapping")
 	}
 	return interval
 }
@@ -599,14 +581,14 @@ func (i *Instances) Recieve() {
 			err = decoder.Decode(&sensorlocation)
 			failOnError(err, "didn't get data\n")
 
-			i := i.Update(datastore, sensorlocation)
+			_ = i.Update(datastore, sensorlocation)
 			failOnError(err, "Interval update fail")
-			fmt.Printf("%s\n", i.Zone)
+			/*fmt.Printf("%s\n", i.Zone)
 			fmt.Printf("%s\n", i.Deviceid)
 			fmt.Printf("%s\n", i.From)
 			fmt.Printf("%v\n", i.To)
 			fmt.Printf("%v\n", i.Rssi)
-
+//*/
 			/*
 				hämta senaste intervall för (mobil) enhet
 
