@@ -55,14 +55,6 @@ export class SensorsRoute {
       return;
     }
 
-    if(! req.body.sensorId){
-      res.status(400).json({
-        success: false,
-        message: "Missing sensorId in body"
-      })
-      return;
-    }
-
     if(! req.body.from){
       res.status(400).json({
         success: false,
@@ -80,8 +72,8 @@ export class SensorsRoute {
       to = new Date(toTimestamp * 1000);
     }
 
-    Database.getInstance().updateLastIfNull(req.body.sensorId, from)
-      .flatMap(() => Database.getInstance().addSensorLocation(req.body.sensorId, req.body.zoneId, from, to))
+    Database.getInstance().updateLastIfNull(req.params.sensorid, from)
+      .flatMap(() => Database.getInstance().addSensorLocation(req.params.sensorid, req.body.zoneId, from, to))
       .subscribe(
         location => res.json({
           success: true,
