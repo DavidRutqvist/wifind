@@ -1,11 +1,18 @@
 package main
 
-import ()
+import (
+	"fmt"
+	"time"
+	"github.com/hashicorp/consul/api"
+	"github.com/streadway/amqp"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+)
 
 
 type RealTimeCounter struct {
-	Session				*mgo.Session
-	RabbitChan		*amqp.Channel
+	session				*mgo.Session
+	rabbitChan		*amqp.Channel
 	updateChannel	chan string
 }
 
@@ -14,14 +21,13 @@ type ZoneOccupancy struct {
 	Occupancy	int
 }
 
-func InitRealTimeCounter(mongoAddress string) *RealTimeCounter {
+func InitRealTimeCounter(mongoAddress string, consulAddress string) *RealTimeCounter {
 	var realTimeCounter *RealTimeCounter = new(RealTimeCounter)
 
 	fmt.Printf("Connecting to MongoDB at: %v\n", mongoAddress)
 	session, err := mgo.Dial(mongoAddress)
 	failOnError(err, "Failed to connect to MongoDB\n")
 	session.SetMode(mgo.Monotonic, true)
-	realTimeCounter.Session = session
 
 	fmt.Printf("Connecting to Consul at: %v\n", consulAddress)
 	config := api.DefaultConfig()
@@ -46,7 +52,7 @@ func InitRealTimeCounter(mongoAddress string) *RealTimeCounter {
 	channel, err := connection.Channel()
 	failOnError(err, "Failed to open a channel\n")
 
-	realTimeCounter.RabbitChan = channel
+	realTimeCounter.rabbitChan = channel
 	realTimeCounter.updateChannel = make(chan string)
 
 	go realTimeCounter.handleZoneChanges()
@@ -63,14 +69,14 @@ func (realTimeCounter *RealTimeCounter) handleZoneChanges() {
 		occupancy := realTimeCounter.getOccupancy(zoneId)
 
 		// TODO Publish event
-		fmt.println(occupancy)
+		fmt.Println(occupancy)
 	}
 }
 
 func (realTimeCounter *RealTimeCounter) getOccupancy(zoneId string) *ZoneOccupancy {
-	currentTimestamp := time.Unix(time.Now(), 0)
-	c := session.DB("store").C("intervals")
-	occupancy, err = c.Find(bson.M{"zoneId": zoneId, "from": bson.M{"$lte": currentTimestamp}, "$or": []bson.M{"to": bson.M{"$gte", currentTimestamp}, "to": bson.M{"$exists": false}}}).Count()
+	currentTimestamp := time.Now()
+	c := realTimeCounter.session.DB("store").C("intervals")
+	occupancy, err := c.Find(bson.M{"zoneId": zoneId, "from": bson.M{"$lte": currentTimestamp}, "$or": []bson.M{bson.M{"to": bson.M{"$gte": currentTimestamp}}, bson.M{"to": bson.M{"$exists": false}}}}).Count()
 	
 	if err != nil {
 		panic(err)
