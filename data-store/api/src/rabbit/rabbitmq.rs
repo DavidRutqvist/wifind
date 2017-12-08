@@ -4,7 +4,7 @@ extern crate tokio_core;
 extern crate pretty_env_logger;
 extern crate serde_json;
 
-use std::{thread, env};
+use std::{panic, time, thread, env, io};
 use std::sync::{Arc, mpsc};
 use std::sync::mpsc::Receiver;
 use self::futures::future::Future;
@@ -45,9 +45,14 @@ fn event_exchange(rx: Receiver<(Payload, String)>, rabbit_host: String) {
             // connect() returns a future of an AMQP Client
             // that resolves once the handshake is done
             lapin::client::Client::connect(stream, &ConnectionOptions::default())
-        }).and_then(|(client, _)| {
+        }).and_then(|(client, heartbeat_future_fn)| {
 
-            debug!("Exch connected!");
+            let heartbeat_client = client.clone();
+            thread::Builder::new().name("exch heartbeat thread".to_string()).spawn(move || {
+                Core::new().unwrap().run(heartbeat_future_fn(&heartbeat_client)).unwrap();
+            }).unwrap();
+
+            println!("Exch connected!");
             // create channel to rabbit
             client.create_channel().and_then(move |channel| {
                 // Set Exchange options
@@ -92,7 +97,7 @@ fn event_exchange(rx: Receiver<(Payload, String)>, rabbit_host: String) {
     ).unwrap();
 }
 
-pub fn run(rabbit_host: String, ) {
+pub fn run(rabbit_host: String) {
 
     // Connect to DB
     let db_addr = env::var("DB_HOST_ADDR")

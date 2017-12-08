@@ -9,7 +9,7 @@ extern crate serde;
 extern crate rocket;
 extern crate rocket_contrib;
 
-use std::env;
+use std::{time, env};
 use std::thread;
 
 use rocket::State;
@@ -88,9 +88,17 @@ fn main() {
     let rabbit_addr = sd::get_node_address("rabbit")
         .expect("No RabbitMQ service found! Is Consul reachable?");
 
-    thread::Builder::new().name("rabbit thread".to_string()).spawn(move || {
-        rabbitmq::run(rabbit_addr);
-    }).unwrap();
+    thread::spawn(move || {
+        loop {
+            let addr = rabbit_addr.clone();
+            if thread::Builder::new().name("rabbit thread".to_string()).spawn(move || {
+                rabbitmq::run(addr);
+            }).unwrap().join().is_err() {
+                warn!("Connection to Rabbit failed, restarting in 1 second...");
+                thread::sleep(time::Duration::from_millis(1000));
+            }
+        }
+    });
 
     let db_addr = env::var("DB_HOST_ADDR")
         .expect("Database Host Address must be provided through env var!");
