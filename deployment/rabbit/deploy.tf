@@ -1,5 +1,5 @@
 provider "nomad" {
-  address = "http://srv.wifind.se:4646"
+  address = "http://localhost:4646"
 }
 
 # Register a job
