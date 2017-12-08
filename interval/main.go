@@ -81,7 +81,7 @@ type Event struct {
 func createInstances(mongoAddress string, consulAddress string, exchangedTopic string, SubscriptionTopic string) *Instances {
 	var instances *Instances = new(Instances)
 
-	instances.realTimeCounter = InitRealTimeCounter(mongoAddress, consulAddress)
+	instances.realTimeCounter = InitRealTimeCounter(mongoAddress, consulAddress, exchangedTopic)
 
 	fmt.Printf("Connecting to MongoDB at: %v\n", mongoAddress)
 	session, err := mgo.Dial(mongoAddress)
