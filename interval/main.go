@@ -562,7 +562,6 @@ func createEvent(interval *Interval, eventType string) Event {
 
 	event.Body = body
 	event.Topic = topic
-
 	return event
 }
 
