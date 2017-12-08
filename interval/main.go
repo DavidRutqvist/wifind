@@ -533,7 +533,7 @@ func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *
 		} else {
 			duration := time.Since(interval.To)
 
-			} if interval.Zone != sensorlocation.Zoneid { //senaste intervall fel zon - skapa nytt
+			if interval.Zone != sensorlocation.Zoneid { //senaste intervall fel zon - skapa nytt
 				fmt.Println("Different zone")
 				if interval.Rssi > datastore.Rssi{ //den nuvarande intervallet starkare, annan zon bara sett men enhet inte bytt
 					fmt.Println("Device picked up by other sensor with lower RSSI, discarding")
@@ -562,8 +562,9 @@ func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *
 				i.EventChannel <- createIntervalEvent(interval, "UPDATED")
 			}
 		}
+	
 
-		i.realTimeCounter.ZoneChanged(sensorlocation.Zoneid)
+	i.realTimeCounter.ZoneChanged(sensorlocation.Zoneid)
 	} else {
 		fmt.Println("No zone mapping")
 	}
