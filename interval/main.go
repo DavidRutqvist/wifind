@@ -64,6 +64,12 @@ type Instances struct {
 	ExchangeTopic     string
 	RabbitEndpoint    string
 	SubscriptionTopic string
+	EventChannel 	  chan Event	
+}
+
+type Event struct {
+	body []byte
+	topic string
 }
 
 func createInstances(mongoAddress string, consulAddress string, exchangedTopic string, SubscriptionTopic string) *Instances {
@@ -104,6 +110,7 @@ func createInstances(mongoAddress string, consulAddress string, exchangedTopic s
 	instances.RabbitChan = channel
 	instances.ExchangeTopic = exchangedTopic
 	instances.SubscriptionTopic = SubscriptionTopic
+	instances.EventChannel = make(chan Event)
 
 	return instances
 }
@@ -137,9 +144,45 @@ func main() {
 	mux.HandleFunc(pat.Get("/"), healthCheck(instances))
 	fmt.Printf("Starting Router\n")
 	go instances.Recieve()
+	go instances.eventBroadcaster()
 	http.ListenAndServe("0.0.0.0:8080", mux)
 
 }
+func (i *Instances) eventBroadcaster() {
+	connection, err := amqp.Dial(i.RabbitEndpoint)
+	failOnError(err, "Failed to open a connection\n")
+	defer connection.Close()
+
+	channel, err := connection.Channel()
+	failOnError(err, "Failed to open a channel\n")
+	defer channel.Close()
+
+	err = channel.ExchangeDeclare(
+		i.ExchangeTopic, 	// name
+		"topic",			// topic
+		true,				// durable
+		false,				// auto-deleted
+		false,				// internal
+		false,				// no-wait
+		nil,				// arguments
+	)
+	failOnError(err, "Failed to declare an exchange.")
+	for event <- i.EventChannel {
+		err = channel.Publish(
+			i.ExchangeTopic,	// exchange
+			event.Topic,				// topic
+			false,
+			false,
+			amqp.Publishing{
+				ContentType:	"application/json",
+				Body:			event.Body,
+			})
+	failOnError(err, "Failed to publish event.")	
+	}
+	
+
+} 
+
 func healthCheck(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestDump, err := httputil.DumpRequest(r, false)
@@ -491,6 +534,8 @@ func (i *Instances) Update (datastore Datastore, sensorlocation SensorLocation) 
 				interval.To = time.Unix(datastore.Time, 0) // updatera to värdet till nu
 				err = c.Update(bson.M{"_id": interval.Id}, interval)
 				failOnError(err, "Failed to update interval\n")
+				topic := "intervals." + bson.ObjectIdHex(interval.Id) + ".updated"
+				
 			}
 		}
 	} else {
