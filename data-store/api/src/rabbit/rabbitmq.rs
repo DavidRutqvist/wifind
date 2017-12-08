@@ -65,7 +65,7 @@ fn event_exchange(rx: Receiver<(Payload, String)>, rabbit_host: String) {
                     // extract and construct routing key from JSON payload
                     let extract_routing_key = |payload: Payload| {
                         format!(
-                            "sensor.{}.detected.{}",
+                            "SENSOR.{}.DETECTED.{}",
                             payload.sensor.clone(),
                             payload.device.clone())
                     };
@@ -147,7 +147,6 @@ pub fn run(rabbit_host: String) {
 
             let queue = "sensor_data";
             let ch = channel.clone();
-
 
             channel.queue_declare(queue, &QueueDeclareOptions::default(), &FieldTable::new()).and_then(move |_| {
                 info!("channel {} declared queue {}", id, queue);
