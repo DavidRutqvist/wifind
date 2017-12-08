@@ -65,6 +65,7 @@ type Instances struct {
 	RabbitEndpoint    string
 	SubscriptionTopic string
 	EventChannel      chan Event
+	realTimeCounter		*RealTimeCounter
 }
 
 type Event struct {
@@ -74,6 +75,8 @@ type Event struct {
 
 func createInstances(mongoAddress string, consulAddress string, exchangedTopic string, SubscriptionTopic string) *Instances {
 	var instances *Instances = new(Instances)
+
+	instances.realTimeCounter = InitRealTimeCounter(mongoAddress, consulAddress)
 
 	fmt.Printf("Connecting to MongoDB at: %v\n", mongoAddress)
 	session, err := mgo.Dial(mongoAddress)
@@ -545,6 +548,8 @@ func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *
 				i.EventChannel <- createEvent(interval, "UPDATED")
 			}
 		}
+		
+		i.realTimeCounter.ZoneChanged(sensorlocation.Zoneid)
 	} else {
 		fmt.Println("No zone mapping")
 	}
