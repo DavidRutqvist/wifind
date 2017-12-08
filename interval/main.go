@@ -141,7 +141,7 @@ func main() {
 	exchangedTopic := "event"
 
 	//instances := createInstances(mongoAddress, "srv.wifind.se:8500")
-	instances := createInstances(mongoAddress, consulAddress, exchangedTopic, "sensor.*.detected.*")
+	instances := createInstances(mongoAddress, consulAddress, exchangedTopic, "SENSOR.*.DETECTED.*")
 
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Get("/intervals"), allIntervals(instances))
