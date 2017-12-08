@@ -94,15 +94,16 @@ func (realTimeCounter *RealTimeCounter) handleZoneChanges() {
 func (realTimeCounter *RealTimeCounter) getOccupancy(zoneId string) *ZoneOccupancy {
 	currentTimestamp := time.Now().UTC()
 	expireTimestamp := currentTimestamp.Add(time.Duration(-5) * time.Minute)
+	devices := make([]string, 0)
 	c := realTimeCounter.session.DB("store").C("intervals")
-	occupancy, err := c.Find(bson.M{"zoneId": zoneId, "from": bson.M{"$lte": currentTimestamp}, "to": bson.M{"$gte": expireTimestamp}}).Count()
+	err := c.Find(bson.M{"zoneId": zoneId, "from": bson.M{"$lte": currentTimestamp}, "to": bson.M{"$gte": expireTimestamp}}).Distinct("deviceId", &devices)
 
 	if err != nil {
 		panic(err)
 	}
 
 	zoneOccupancy := new(ZoneOccupancy)
-	zoneOccupancy.Occupancy = occupancy
+	zoneOccupancy.Occupancy = len(devices)
 	zoneOccupancy.ZoneId = zoneId
 
 	return zoneOccupancy
