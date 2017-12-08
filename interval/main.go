@@ -54,6 +54,7 @@ type Interval struct {
 	From     time.Time     `bson:"from" json:"from"`
 	To       time.Time     `bson:"to" json:"to"`
 	Zone     string        `bson:"zoneId" json:"zoneId"`
+	Rssi 	 int32		   `bson:"rssi" json"rssi"`
 }
 type Datastore struct {
 	Device string `json:"device" bson:"device"`
@@ -129,6 +130,7 @@ func CreateInterval(sensorlocation SensorLocation, datastore Datastore) *Interva
 	interval.Deviceid = datastore.Device
 	interval.From = time.Unix(datastore.Time, 0)
 	interval.To = time.Unix(datastore.Time, 0)
+	interval.Rssi = datastore.Rssi
 	return &interval
 }
 func main() {
@@ -530,13 +532,19 @@ func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *
 			i.EventChannel <- createIntervalEvent(interval, "NEW")
 		} else {
 			duration := time.Since(interval.To)
-			if interval.Zone != sensorlocation.Zoneid { //senaste intervall fel zon - skapa nytt
+
+			}else if interval.Zone != sensorlocation.Zoneid { //senaste intervall fel zon - skapa nytt
 				fmt.Println("Different zone")
+				if interval.Rssi > datastore.Rssi{ //den nuvarande intervallet starkare, annan zon bara sett men enhet inte bytt
+					fmt.Println("Device picked up by other sensor with lower RSSI, discarding")
+					return nil
+				}else{
 				interval = CreateInterval(sensorlocation, datastore)
 				err = c.Insert(interval)
 				failOnError(err, "Failed to insert interval time\n")
 
 				i.EventChannel <- createIntervalEvent(interval, "NEW")
+				}
 			} else if duration.Minutes() > 5 { //senaste intervall to värdet för länge sedan - skapa nytt
 				fmt.Println("Old interval")
 				interval = CreateInterval(sensorlocation, datastore)
@@ -544,6 +552,7 @@ func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *
 				failOnError(err, "Failed to insert interval time\n")
 
 				i.EventChannel <- createIntervalEvent(interval, "NEW")
+
 			} else { // inom 5 min, uppdatera
 				fmt.Println("----- UPDATE -----")
 				interval.To = time.Unix(datastore.Time, 0) // updatera to värdet till nu
