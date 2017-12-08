@@ -21,7 +21,7 @@ job "datastore" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/datastore:1.4"
+        image = "docker.adventic.se/wifind/datastore:1.5"
 
         ssl = true
         auth {
