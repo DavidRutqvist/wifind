@@ -28,6 +28,7 @@ func InitRealTimeCounter(mongoAddress string, consulAddress string) *RealTimeCou
 	session, err := mgo.Dial(mongoAddress)
 	failOnError(err, "Failed to connect to MongoDB\n")
 	session.SetMode(mgo.Monotonic, true)
+	realTimeCounter.session = session
 
 	fmt.Printf("Connecting to Consul at: %v\n", consulAddress)
 	config := api.DefaultConfig()
@@ -74,9 +75,10 @@ func (realTimeCounter *RealTimeCounter) handleZoneChanges() {
 }
 
 func (realTimeCounter *RealTimeCounter) getOccupancy(zoneId string) *ZoneOccupancy {
-	currentTimestamp := time.Now()
+	currentTimestamp := time.Now().UTC()
+	expireTimestamp := currentTimestamp.Add(time.Duration(-5)*time.Minute)
 	c := realTimeCounter.session.DB("store").C("intervals")
-	occupancy, err := c.Find(bson.M{"zoneId": zoneId, "from": bson.M{"$lte": currentTimestamp}, "$or": []bson.M{bson.M{"to": bson.M{"$gte": currentTimestamp}}, bson.M{"to": bson.M{"$exists": false}}}}).Count()
+	occupancy, err := c.Find(bson.M{"zoneId": zoneId, "from": bson.M{"$lte": currentTimestamp}, "to": bson.M{"$gte": expireTimestamp}}).Count()
 	
 	if err != nil {
 		panic(err)

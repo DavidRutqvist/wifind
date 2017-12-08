@@ -36,11 +36,16 @@ type PostRes struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
+
+type SensorLocationResponse struct {
+	Success bool    `json:"success"`
+	Sensor  SensorLocation    `json:"sensor"`
+}
 type SensorLocation struct {
-	SensorId string    `json:"id" bson:"_id,omitempty"`
-	Zoneid   string    `json:"zoneid" bson:"zoneid"`
-	From     time.Time `json:"from" bson:"from"`
-	To       time.Time `json:"to" bson:"to"`
+	SensorId string    `json:"sensorId" bson:"_id,omitempty"`
+	Zoneid   string    `json:"zoneId" bson:"zoneid"`
+	From     int64 `json:"from" bson:"from"`
+	To       int64 `json:"to" bson:"to"`
 }
 
 type Interval struct {
@@ -509,10 +514,10 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
 func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *Interval {
 	session := i.Session.Copy()
 	defer session.Close()
-	var interval *Interval
+	interval := new(Interval)
 	c := session.DB("store").C("intervals")
-
-	if (&sensorlocation != nil) && time.Unix(datastore.Time, 0).Before(sensorlocation.From) && (&(sensorlocation.To) == nil || time.Unix(datastore.Time, 0).After(sensorlocation.To)) {
+	fmt.Println(sensorlocation)
+	if (&sensorlocation != nil) && time.Unix(datastore.Time, 0).After(time.Unix(sensorlocation.From, 0)) && (sensorlocation.To == 0 || time.Unix(datastore.Time, 0).Before(time.Unix(sensorlocation.To, 0))) {
 		err := c.Find(bson.M{"deviceId": datastore.Device}).One(&interval) //hämta senaste intervall för (mobil) enhet
 		if err != nil {
 			fmt.Println("NO INTERVAL")
@@ -638,7 +643,7 @@ func (i *Instances) Recieve() {
 	forever := make(chan bool)
 	go func() {
 		var datastore Datastore
-		var sensorlocation SensorLocation
+		var sensorResponse SensorLocationResponse
 
 		for d := range msgs {
 
@@ -648,10 +653,10 @@ func (i *Instances) Recieve() {
 			resp, err := http.Get(service + "/sensors/" + datastore.Sensor)
 			failOnError(err, "Failed to get sensorlocation.\n")
 			decoder := json.NewDecoder(resp.Body)
-			err = decoder.Decode(&sensorlocation)
+			err = decoder.Decode(&sensorResponse)
 			failOnError(err, "didn't get data\n")
 
-			_ = i.Update(datastore, sensorlocation)
+			_ = i.Update(datastore, sensorResponse.Sensor)
 			failOnError(err, "Interval update fail")
 			/*fmt.Printf("%s\n", i.Zone)
 						fmt.Printf("%s\n", i.Deviceid)
