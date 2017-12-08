@@ -38,14 +38,14 @@ type PostRes struct {
 }
 
 type SensorLocationResponse struct {
-	Success bool    `json:"success"`
-	Sensor  SensorLocation    `json:"sensor"`
+	Success bool           `json:"success"`
+	Sensor  SensorLocation `json:"sensor"`
 }
 type SensorLocation struct {
-	SensorId string    `json:"sensorId" bson:"_id,omitempty"`
-	Zoneid   string    `json:"zoneId" bson:"zoneid"`
-	From     int64 `json:"from" bson:"from"`
-	To       int64 `json:"to" bson:"to"`
+	SensorId string `json:"sensorId" bson:"_id,omitempty"`
+	Zoneid   string `json:"zoneId" bson:"zoneid"`
+	From     int64  `json:"from" bson:"from"`
+	To       int64  `json:"to" bson:"to"`
 }
 
 type Interval struct {
@@ -70,7 +70,7 @@ type Instances struct {
 	RabbitEndpoint    string
 	SubscriptionTopic string
 	EventChannel      chan Event
-	realTimeCounter		*RealTimeCounter
+	realTimeCounter   *RealTimeCounter
 }
 
 type Event struct {
@@ -527,7 +527,7 @@ func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *
 			err = c.Insert(interval)
 			failOnError(err, "Failed to insert interval\n")
 
-			i.EventChannel <- createEvent(interval, "NEW")
+			i.EventChannel <- createIntervalEvent(interval, "NEW")
 		} else {
 			duration := time.Since(interval.To)
 			if interval.Zone != sensorlocation.Zoneid { //senaste intervall fel zon - skapa nytt
@@ -536,24 +536,24 @@ func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *
 				err = c.Insert(interval)
 				failOnError(err, "Failed to insert interval time\n")
 
-				i.EventChannel <- createEvent(interval, "NEW")
+				i.EventChannel <- createIntervalEvent(interval, "NEW")
 			} else if duration.Minutes() > 5 { //senaste intervall to värdet för länge sedan - skapa nytt
 				fmt.Println("Old interval")
 				interval = CreateInterval(sensorlocation, datastore)
 				err = c.Insert(interval)
 				failOnError(err, "Failed to insert interval time\n")
 
-				i.EventChannel <- createEvent(interval, "NEW")
+				i.EventChannel <- createIntervalEvent(interval, "NEW")
 			} else { // inom 5 min, uppdatera
 				fmt.Println("----- UPDATE -----")
 				interval.To = time.Unix(datastore.Time, 0) // updatera to värdet till nu
 				err = c.Update(bson.M{"_id": interval.Id}, interval)
 				failOnError(err, "Failed to update interval\n")
 
-				i.EventChannel <- createEvent(interval, "UPDATED")
+				i.EventChannel <- createIntervalEvent(interval, "UPDATED")
 			}
 		}
-		
+
 		i.realTimeCounter.ZoneChanged(sensorlocation.Zoneid)
 	} else {
 		fmt.Println("No zone mapping")
@@ -561,7 +561,7 @@ func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *
 	return interval
 }
 
-func createEvent(interval *Interval, eventType string) Event {
+func createIntervalEvent(interval *Interval, eventType string) Event {
 	var event Event
 
 	buffer := new(bytes.Buffer)

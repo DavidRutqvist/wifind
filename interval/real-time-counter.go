@@ -1,27 +1,30 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"time"
+
 	"github.com/hashicorp/consul/api"
 	"github.com/streadway/amqp"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
-
 type RealTimeCounter struct {
-	session				*mgo.Session
-	rabbitChan		*amqp.Channel
-	updateChannel	chan string
+	session       *mgo.Session
+	rabbitChan    *amqp.Channel
+	updateChannel chan string
+	exchangeTopic string
 }
 
 type ZoneOccupancy struct {
-	ZoneId		string
-	Occupancy	int
+	ZoneId    string
+	Occupancy int
 }
 
-func InitRealTimeCounter(mongoAddress string, consulAddress string) *RealTimeCounter {
+func InitRealTimeCounter(mongoAddress string, consulAddress string, exchangeTopic string) *RealTimeCounter {
 	var realTimeCounter *RealTimeCounter = new(RealTimeCounter)
 
 	fmt.Printf("Connecting to MongoDB at: %v\n", mongoAddress)
@@ -55,6 +58,7 @@ func InitRealTimeCounter(mongoAddress string, consulAddress string) *RealTimeCou
 
 	realTimeCounter.rabbitChan = channel
 	realTimeCounter.updateChannel = make(chan string)
+	realTimeCounter.exchangeTopic = exchangeTopic
 
 	go realTimeCounter.handleZoneChanges()
 	return realTimeCounter
@@ -66,27 +70,54 @@ func (realTimeCounter *RealTimeCounter) ZoneChanged(zoneId string) {
 
 func (realTimeCounter *RealTimeCounter) handleZoneChanges() {
 	for {
-		zoneId := <- realTimeCounter.updateChannel
+		zoneId := <-realTimeCounter.updateChannel
 		occupancy := realTimeCounter.getOccupancy(zoneId)
 
 		// TODO Publish event
+		event := createZoneOccupancyEvent(occupancy, "UPDATED")
+
+		err := realTimeCounter.rabbitChan.Publish(
+			realTimeCounter.exchangeTopic, // exchange
+			event.Topic,                   // topic
+			false,
+			false,
+			amqp.Publishing{
+				ContentType: "application/json",
+				Body:        event.Body,
+			})
+		failOnError(err, "Failed to publish event.")
+
 		fmt.Println(occupancy)
 	}
 }
 
 func (realTimeCounter *RealTimeCounter) getOccupancy(zoneId string) *ZoneOccupancy {
 	currentTimestamp := time.Now().UTC()
-	expireTimestamp := currentTimestamp.Add(time.Duration(-5)*time.Minute)
+	expireTimestamp := currentTimestamp.Add(time.Duration(-5) * time.Minute)
 	c := realTimeCounter.session.DB("store").C("intervals")
 	occupancy, err := c.Find(bson.M{"zoneId": zoneId, "from": bson.M{"$lte": currentTimestamp}, "to": bson.M{"$gte": expireTimestamp}}).Count()
-	
+
 	if err != nil {
 		panic(err)
 	}
-	
+
 	zoneOccupancy := new(ZoneOccupancy)
 	zoneOccupancy.Occupancy = occupancy
 	zoneOccupancy.ZoneId = zoneId
 
 	return zoneOccupancy
+}
+
+func createZoneOccupancyEvent(zoneOccupancy *ZoneOccupancy, eventType string) Event {
+	var event Event
+
+	buffer := new(bytes.Buffer)
+	json.NewEncoder(buffer).Encode(zoneOccupancy)
+
+	body := buffer.Bytes()
+	topic := "OCCUPANCY." + zoneOccupancy.ZoneId + "." + eventType
+
+	event.Body = body
+	event.Topic = topic
+	return event
 }
