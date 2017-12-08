@@ -176,7 +176,7 @@ func getChildrenFromId(i *Instances) func(w http.ResponseWriter, r *http.Request
 
         c := session.DB("store").C("zones")
 
-		var zones []Zone
+		zones := make([]Zone, 0)
 		err = c.Find(bson.M{"parent": zoneid}).All(&zones)
         if err != nil {
 			response = PostRes{Success: false, Message: "Database error"}
@@ -185,16 +185,6 @@ func getChildrenFromId(i *Instances) func(w http.ResponseWriter, r *http.Request
 			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
 			return
         }
-		
-        if len(zones) == 0 {
-			response = PostRes{Success: false, Message: "No children found"}
-			json.NewEncoder(buffer).Encode(response)
-			respBody := buffer.Bytes()
-			ResponseWithJSON(w, respBody, http.StatusInternalServerError)
-			return
-		}
-
-		
 
         respBody, err = json.MarshalIndent(zones, "", "  ")
         if err != nil {

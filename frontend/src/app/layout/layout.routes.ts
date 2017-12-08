@@ -5,13 +5,12 @@ const LAYOUT_ROUTES: Routes = [
 		path: "",
 		component: LayoutComponent,
 		children: [
-			{ path: "", redirectTo: "dashboard", pathMatch: "full" },
-			//---------------------------------------------------------->
-			//Dashboard
-			//---------------------------------------------------------->
-			{
+			{ path: "", redirectTo: "dashboard", pathMatch: "full" }, {
 				path: "dashboard",
 				loadChildren: "../pages/dashboards/dashboards.module#DashboardsModule"
+			}, {
+				path: "management",
+				loadChildren: "../pages/management/management.module#ManagementModule"
 			}
 		]
 	},

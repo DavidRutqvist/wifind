@@ -45,7 +45,7 @@ job "sensorlocation" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/sensorlocation:1.1.1"
+        image = "docker.adventic.se/wifind/sensorlocation:1.1.2"
 
         port_map {
           http = 3000
