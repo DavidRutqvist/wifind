@@ -214,24 +214,24 @@ body {
 				.nav .open > a,
 				.nav .open > a:focus,
 				.nav .open > a:hover,
-				.nav-pills > li > a:active,
-				.nav-pills > li > a:hover,
-				.nav-pills > li.active > a {
+				.nav-pills li > a:active,
+				.nav-pills li > a:hover,
+				.nav-pills li.active > a {
 					color: $sidebar_menu_active_text_color;
 					background-color: $sidebar_menu_active_bg;
 				}
 
-				.nav > li > a:focus {
+				.nav li > a:focus {
 					background-color: $sidebar_menu_wrapper_bg;
 				}
 
-				.nav > li > a:hover {
+				.nav li > a:hover {
 					background-color: $sidebar_menu_active_bg;
 				}
 
-				.nav-pills > li.active > a,
-				.nav-pills > li.active > a:focus,
-				.nav-pills > li.active > a:hover {
+				.nav-pills li.active > a,
+				.nav-pills li.active > a:focus,
+				.nav-pills li.active > a:hover {
 					color: $sidebar_menu_active_text_color;
 					background-color: $sidebar_menu_active_bg;
 				}
@@ -245,17 +245,17 @@ body {
 				}
 
 				.nav .nav-sub li a:hover,
-				.nav > li > .nav-sub li a:hover,
-				.nav > li > .nav-sub li.active > a,
-				.nav > li > .nav-sub li.active a:hover {
+				.nav li > .nav-sub li a:hover,
+				.nav li > .nav-sub li.active > a,
+				.nav li > .nav-sub li.active a:hover {
 					color: $sidebar_menu_active_text_color;
 				}
-				.nav-pills > li,
-				.nav-pills > .nav-dropdown {
+				.nav-pills li,
+				.nav-pills .nav-dropdown {
 					border-left: solid 3px transparent;
 				}
-				.nav-pills > li.active,
-				.nav-pills > .nav-dropdown.open.active {
+				.nav-pills li.active,
+				.nav-pills .nav-dropdown.open.active {
 					border-left-color: $app_accent;
 				}
 			}

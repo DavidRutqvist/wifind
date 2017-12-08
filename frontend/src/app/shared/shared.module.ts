@@ -45,9 +45,6 @@ import { MalihuScrollbarModule } from "ngx-malihu-scrollbar";
 // UI Shared Components
 import { FooterComponent } from "../layout/footer/footer.component";
 import { AppBackdropComponent } from "./components/app_backdrop/app_backdrop.component";
-import { Profile } from "./components/profile/profile.component";
-
-
 
 @NgModule({
 	imports: [
@@ -89,8 +86,7 @@ import { Profile } from "./components/profile/profile.component";
 	],
 	declarations: [
 		AppBackdropComponent,
-		FooterComponent,
-		Profile
+		FooterComponent
 	],
 	exports: [
 		CommonModule,
@@ -125,7 +121,6 @@ import { Profile } from "./components/profile/profile.component";
 		StyleModule,
 		NguUtilityModule,
 		AppBackdropComponent,
-		Profile,
 		FooterComponent,
 		ReactiveFormsModule,
 		MalihuScrollbarModule,

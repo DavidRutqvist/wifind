@@ -26,17 +26,17 @@
 				padding: 3px 0;
 			}
 
-			> ul:first-child {
+			> .app-menu-item > ul:first-child, > ul:first-child {
 				padding-top: 10px;
 			}
 
-			> ul:last-child {
+			> .app-menu-item > .ul:last-childr, > ul:last-child {
 				padding-bottom: 10px;
 			}
 		}
 
 		&.open {
-			> .nav-sub {
+			> .app-menu-item > .nav-sub, > .nav-sub {
 				max-height: 1000px;
 			}
 		}
@@ -194,7 +194,10 @@
 #app_main-menu-wrapper {
 	.nav-pills > li.active > a,
 	.nav-pills > li.active > a:focus,
-	.nav-pills > li.active > a:hover {
+	.nav-pills > li.active > a:hover,
+	.nav-pills > .app-menu-item > li.active > a,
+	.nav-pills > .app-menu-item > li.active > a:focus,
+	.nav-pills > .app-menu-item > li.active > a:hover {
 		border-left: solid 3px transparent;
 	}
 
@@ -212,7 +215,8 @@
 }
 
 #app_main-menu-wrapper .nav > li > .nav-sub > li > .nav-sub > li > a,
-#app_main-menu-wrapper .nav > li > .nav-sub > li > .nav-sub > li > div.radio {
+#app_main-menu-wrapper .nav > li > .nav-sub > li > .nav-sub > li > div.radio,
+#app_main-menu-wrapper .nav > .app-menu-item > li > .nav-sub > .app-menu-item > li > .nav-sub .app-menu-item > li > a {
 	padding-left: 55px;
 }
 
@@ -339,7 +343,7 @@
 .app_sidebar-menu-collapsed #app_main-menu-wrapper .nav li .label {
 	display: none;
 }
-
+ 
 .app_sidebar-menu-collapsed #app_main-menu-wrapper .nav > li > .nav-sub {
 	position: absolute;
 	left: 50px;

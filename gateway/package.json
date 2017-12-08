@@ -1,6 +1,6 @@
 {
   "name": "wifind-gateway-api",
-  "version": "1.0.0",
+  "version": "0.0.4",
   "private": true,
   "scripts": {
     "dev": "SET NODE_ENV=development && nodemon ./bin/www",

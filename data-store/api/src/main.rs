@@ -13,6 +13,7 @@ use std::{time, env};
 use std::thread;
 
 use rocket::State;
+use rocket::response::status::NotFound;
 use rocket_contrib::Json;
 
 mod db;
@@ -46,9 +47,14 @@ fn time_interval(start: u64, stop: u64, db: State<DB>) -> Json<serde_json::Value
 }
 
 #[get("/<sensor_id>")]
-fn sensor(sensor_id: String, db: State<DB>) -> Json<serde_json::Value> {
-    let result = db.get_sensor(sensor_id);
-    Json(result)
+fn sensor(sensor_id: String, db: State<DB>) -> Result<Json<serde_json::Value>, NotFound<Json<serde_json::Value>>> {
+    let result = db.get_sensor(sensor_id.clone());
+
+    let res: Vec<serde_json::Value> = serde_json::from_value(result.clone()).unwrap();
+    match res.len() {
+        0 => Err(NotFound(Json(json!({"success": false, "message": format!("Sensor {} not found", sensor_id)})))),
+        _ => Ok(Json(result))
+    }
 }
 
 #[get("/")]
@@ -79,8 +85,8 @@ fn health_check(db: State<DB>) -> Result<&'static str, &'static str> {
 }
 
 #[get("/")]
-fn root() -> &'static str {
-    "This is an API"
+fn root() -> Json<serde_json::Value> {
+    Json(json!({"success": true, "message": "This is an api"}))
 }
 
 fn main() {
