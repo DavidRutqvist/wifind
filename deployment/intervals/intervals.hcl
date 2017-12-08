@@ -45,7 +45,7 @@ job "intervals" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/intervals:0.0.1"
+        image = "docker.adventic.se/wifind/intervals:1.0.0"
 
         port_map {
           http = 8080
