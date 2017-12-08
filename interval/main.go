@@ -48,7 +48,7 @@ type Interval struct {
 	Deviceid string        `bson:"deviceId" json:"deviceId"`
 	From     time.Time     `bson:"from" json:"from"`
 	To       time.Time     `bson:"to" json:"to"`
-	Zone     string 	   `bson:"zoneId" json:"zoneId"`
+	Zone     string        `bson:"zoneId" json:"zoneId"`
 }
 type Datastore struct {
 	Device string `json:"device" bson:"device"`
@@ -64,12 +64,12 @@ type Instances struct {
 	ExchangeTopic     string
 	RabbitEndpoint    string
 	SubscriptionTopic string
-	EventChannel 	  chan Event	
+	EventChannel      chan Event
 }
 
 type Event struct {
-	body []byte
-	topic string
+	Body  []byte
+	Topic string
 }
 
 func createInstances(mongoAddress string, consulAddress string, exchangedTopic string, SubscriptionTopic string) *Instances {
@@ -114,7 +114,7 @@ func createInstances(mongoAddress string, consulAddress string, exchangedTopic s
 
 	return instances
 }
-func CreateInterval(sensorlocation SensorLocation, datastore Datastore) *Interval{
+func CreateInterval(sensorlocation SensorLocation, datastore Datastore) *Interval {
 	var interval Interval
 	interval.Id = bson.NewObjectId()
 	interval.Zone = sensorlocation.Zoneid
@@ -158,30 +158,31 @@ func (i *Instances) eventBroadcaster() {
 	defer channel.Close()
 
 	err = channel.ExchangeDeclare(
-		i.ExchangeTopic, 	// name
-		"topic",			// topic
-		true,				// durable
-		false,				// auto-deleted
-		false,				// internal
-		false,				// no-wait
-		nil,				// arguments
+		i.ExchangeTopic, // name
+		"topic",         // topic
+		true,            // durable
+		false,           // auto-deleted
+		false,           // internal
+		false,           // no-wait
+		nil,             // arguments
 	)
 	failOnError(err, "Failed to declare an exchange.")
-	for event <- i.EventChannel {
+
+	for {
+		event := <-i.EventChannel
 		err = channel.Publish(
-			i.ExchangeTopic,	// exchange
-			event.Topic,				// topic
+			i.ExchangeTopic, // exchange
+			event.Topic,     // topic
 			false,
 			false,
 			amqp.Publishing{
-				ContentType:	"application/json",
-				Body:			event.Body,
+				ContentType: "application/json",
+				Body:        event.Body,
 			})
-	failOnError(err, "Failed to publish event.")	
+		failOnError(err, "Failed to publish event.")
 	}
-	
 
-} 
+}
 
 func healthCheck(i *Instances) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -502,40 +503,46 @@ func getIntervalForZoneByTime(i *Instances) func(w http.ResponseWriter, r *http.
 		ResponseWithJSON(w, respBody, http.StatusOK)
 	}
 }
-func (i *Instances) Update (datastore Datastore, sensorlocation SensorLocation) *Interval {
+func (i *Instances) Update(datastore Datastore, sensorlocation SensorLocation) *Interval {
 	session := i.Session.Copy()
-		defer session.Close()
+	defer session.Close()
 	var interval *Interval
 	c := session.DB("store").C("intervals")
 
 	if (&sensorlocation != nil) && time.Unix(datastore.Time, 0).Before(sensorlocation.From) && (&(sensorlocation.To) == nil || time.Unix(datastore.Time, 0).After(sensorlocation.To)) {
 		err := c.Find(bson.M{"deviceId": datastore.Device}).One(&interval) //hämta senaste intervall för (mobil) enhet
-		if err != nil{
+		if err != nil {
 			fmt.Println("NO INTERVAL")
 			fmt.Println(err)
 			//failOnError(err, "Cant find interval\n")
 			interval = CreateInterval(sensorlocation, datastore) //finns inget - skapa nytt
 			err = c.Insert(interval)
 			failOnError(err, "Failed to insert interval\n")
+
+			i.EventChannel <- createEvent(interval, "NEW")
 		} else {
 			duration := time.Since(interval.To)
-			if interval.Zone != sensorlocation.Zoneid{ //senaste intervall fel zon - skapa nytt
+			if interval.Zone != sensorlocation.Zoneid { //senaste intervall fel zon - skapa nytt
 				fmt.Println("Different zone")
 				interval = CreateInterval(sensorlocation, datastore)
 				err = c.Insert(interval)
 				failOnError(err, "Failed to insert interval time\n")
-			} else if duration.Minutes() > 5{ //senaste intervall to värdet för länge sedan - skapa nytt
+
+				i.EventChannel <- createEvent(interval, "NEW")
+			} else if duration.Minutes() > 5 { //senaste intervall to värdet för länge sedan - skapa nytt
 				fmt.Println("Old interval")
 				interval = CreateInterval(sensorlocation, datastore)
 				err = c.Insert(interval)
 				failOnError(err, "Failed to insert interval time\n")
+
+				i.EventChannel <- createEvent(interval, "NEW")
 			} else { // inom 5 min, uppdatera
 				fmt.Println("----- UPDATE -----")
 				interval.To = time.Unix(datastore.Time, 0) // updatera to värdet till nu
 				err = c.Update(bson.M{"_id": interval.Id}, interval)
 				failOnError(err, "Failed to update interval\n")
-				topic := "intervals." + bson.ObjectIdHex(interval.Id) + ".updated"
-				
+
+				i.EventChannel <- createEvent(interval, "UPDATED")
 			}
 		}
 	} else {
@@ -543,6 +550,21 @@ func (i *Instances) Update (datastore Datastore, sensorlocation SensorLocation) 
 	}
 	return interval
 }
+
+func createEvent(interval *Interval, eventType string) Event {
+	var event Event
+
+	buffer := new(bytes.Buffer)
+	json.NewEncoder(buffer).Encode(interval)
+
+	body := buffer.Bytes()
+	topic := "INTERVALS." + interval.Zone + "." + eventType + "." + interval.Deviceid
+
+	event.Body = body
+	event.Topic = topic
+	return event
+}
+
 func (i *Instances) Recieve() {
 	conn, err := amqp.Dial(i.RabbitEndpoint)
 	failOnError(err, "Failed to connect to RabbitMQ\n")
@@ -618,8 +640,6 @@ func (i *Instances) Recieve() {
 			err := json.Unmarshal(d.Body, &datastore)
 			failOnError(err, "Failed to unmarshal event.\n")
 
-			
-
 			resp, err := http.Get(service + "/sensors/" + datastore.Sensor)
 			failOnError(err, "Failed to get sensorlocation.\n")
 			decoder := json.NewDecoder(resp.Body)
@@ -629,11 +649,11 @@ func (i *Instances) Recieve() {
 			_ = i.Update(datastore, sensorlocation)
 			failOnError(err, "Interval update fail")
 			/*fmt.Printf("%s\n", i.Zone)
-			fmt.Printf("%s\n", i.Deviceid)
-			fmt.Printf("%s\n", i.From)
-			fmt.Printf("%v\n", i.To)
-			fmt.Printf("%v\n", i.Rssi)
-//*/
+						fmt.Printf("%s\n", i.Deviceid)
+						fmt.Printf("%s\n", i.From)
+						fmt.Printf("%v\n", i.To)
+						fmt.Printf("%v\n", i.Rssi)
+			//*/
 			/*
 				hämta senaste intervall för (mobil) enhet
 
