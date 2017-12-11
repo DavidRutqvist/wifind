@@ -36,7 +36,7 @@ job "rabbit" {
 
       resources {
         cpu    = 500 # 500 MHz
-        memory = 256 # 256MB
+        memory = 1024 # 1GB
 
         network {
           mbits = 10
