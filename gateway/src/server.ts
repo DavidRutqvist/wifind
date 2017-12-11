@@ -9,6 +9,8 @@ import { SensorsRoute } from "./routes/sensors";
 import { ServiceFactory } from "./services/service-factory";
 import { ServiceDiscovery } from "./utils/service-discovery";
 import { SocketHandler } from "./push/socket-handler";
+import { AmqpTopicListener } from "./push/amqp-topic-listener";
+import { ListenerFactory } from "./push/listener-factory";
 
 /**
  * The server.
@@ -19,6 +21,7 @@ export class Server {
   public app: express.Application;
   private serviceFactory: ServiceFactory;
   private socketServer: SocketIO.Server;
+  private listeners: AmqpTopicListener[];
 
   /**
    * Bootstrap the application.
@@ -47,11 +50,13 @@ export class Server {
 
     // add routes
     this.routes();
+
+    this.listeners = [];
   }
   
   public setSocketServer(socketServer: SocketIO.Server): void {
     this.socketServer = socketServer;
-    this.socketServer.on("connection", socket => SocketHandler.onConnection(socket));
+    this.socketRoutes();
   }
 
   /**
@@ -99,6 +104,11 @@ export class Server {
 
     // init socket handler
     SocketHandler.initialize();
+    const listeners = ListenerFactory.getListeners(discovery, process.env.EXCHANGE).share();
+    listeners.subscribe(listeners => this.listeners = listeners);
+    listeners.flatMap(x => x)
+      .flatMap(x => x.connect())
+      .subscribe(() => SocketHandler.initialize());
   }
 
   /**
@@ -118,8 +128,19 @@ export class Server {
     this.app.use("/api", router);
   }
 
+  public socketRoutes(): void {
+    this.socketServer.of("occupancy").on("connection", socket => SocketHandler.onConnection("occupancy", socket));
+  }
+
   public shutdown(callback: () => void): void {
     console.log("Shutting down server");
-    callback();
+
+    const closeObservables: Rx.Observable<void>[] = [];
+    for(let i = 0; i < this.listeners.length; i++) {
+      closeObservables.push(this.listeners[i].close());
+    }
+
+    Rx.Observable.forkJoin(...closeObservables)
+      .subscribe(() => callback());
   }
 }

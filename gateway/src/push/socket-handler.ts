@@ -2,6 +2,7 @@
 import * as SocketIO from "socket.io";
 import * as log from "winston";
 import { SocketConnection } from "./socket-connection";
+import { OccupancyConnection } from "./occupancy/occupancy-connection";
 
 export class SocketHandler {
   private static isInitialized: boolean = false;
@@ -19,7 +20,10 @@ export class SocketHandler {
     }
 
     if (namespace === "occupancy") {
-
+      console.log(socket.handshake);
+      const prenumerations = (<string>socket.handshake.query.prenumerations).split(",");
+      this.initConnection("occupancy", socket, new OccupancyConnection(prenumerations, socket));
+      log.info("Got new occupancy websocket for zones: " + prenumerations.join(", "));
     } else {
       log.warn("Closing connection to websocket with unknown namespace");
       socket.disconnect(true);
@@ -28,6 +32,11 @@ export class SocketHandler {
 
   private static initConnection(namespace: string, socket: SocketIO.Socket, connection: SocketConnection): void {
     socket.on("disconnect", () => this.onDisconnect(namespace, connection));
+    
+    if (!SocketHandler.connectionsMap[namespace]) {
+      SocketHandler.connectionsMap[namespace] = [];
+    }
+
     SocketHandler.connectionsMap[namespace].push(connection);
   }
 
@@ -45,7 +54,7 @@ export class SocketHandler {
     log.warn("Got disconnect from unknown socket");
   }
 
-  public static getConnection(namespace: string): SocketConnection[] {
+  public static getConnections(namespace: string): SocketConnection[] {
     return this.connectionsMap[namespace];
   }
 }
