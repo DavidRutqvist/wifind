@@ -20,8 +20,8 @@ type RealTimeCounter struct {
 }
 
 type ZoneOccupancy struct {
-	ZoneId    string
-	Occupancy int
+	ZoneId    string `json:"zoneID"`
+	Occupancy int    `json:"occupancy"`
 }
 
 func InitRealTimeCounter(mongoAddress string, consulAddress string, exchangeTopic string) *RealTimeCounter {
