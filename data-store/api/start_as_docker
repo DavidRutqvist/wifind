@@ -1,12 +1,12 @@
-#!/bin/bash
 
 docker run \
     -it \
     --rm \
     -p 8000:8000 \
     --link influxdb:database \
-    -e ROCKET_ADDRESS=0.0.0.0 \
-    -e ROCKET_ENV=dev \
+    -e ROCKET_PORT=8000 \
+    -e ROCKET_ENV=production \
     -e DB_HOST_ADDR=database:8086 \
+    -e CONSUL_ADDR=130.240.5.73:8500 \
     --name wds \
-    wifind/datastore
+    docker.adventic.se/wifind/datastore:1.4
