@@ -10,8 +10,12 @@
 			</header>
 		</div>
 		<div class="content-body">
-	
+			<div class="row" *ngIf="zones">
+				<div class="col-lg-4" *ngFor="let zone of zones">
+					<app-zone-badge [zone]="zone"></app-zone-badge>
+				</div>
 			</div>
 		</div>
 	</div>
-	<footer id="footer_wrapper" class="footer_wrapper"></footer>
+</div>
+<footer id="footer_wrapper" class="footer_wrapper"></footer>

@@ -10,7 +10,8 @@ export class ConfigService {
 
   constructor() {
     this.app = {
-			api: "http://api.wifind.se:9999/api"
+			api: "http://api.wifind.se:9999/api",
+			socketUrl: "http://api.wifind.se:9999"
 		};
 
 		this.appLayout = {
@@ -33,5 +34,9 @@ export class ConfigService {
 		return axios.create({
 			baseURL: this.app.api
 		});
+	}
+
+	public getSocketURL(): string {
+		return this.app.socketUrl;
 	}
 }
