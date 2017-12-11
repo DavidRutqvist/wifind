@@ -20,7 +20,7 @@ job "gateway" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/gateway:0.0.4"
+        image = "docker.adventic.se/wifind/gateway:1.0.0"
 
         port_map {
           http = 3000
@@ -35,6 +35,7 @@ job "gateway" {
 
       env {
         "CONSUL_ADDR" = "${attr.unique.network.ip-address}:8500"
+        "EXCHANGE" = "event"
       }
 
       resources {
