@@ -123,15 +123,16 @@ wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type)
 	const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
 	const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
 
-
-	
-	printf("%02x%02x%02x%02x%02x%02x;%0d;%02x%02x%02x%02x%02x%02x\n",	
+	//uint8_t = hdr-addr2[0]
+	if (!(((hdr->addr2[0]) & (0x02)) == 0x02)) {
+		printf("%02x%02x%02x%02x%02x%02x;%0d;%02x%02x%02x%02x%02x%02x\n",	
 		hdr->addr2[0],hdr->addr2[1],hdr->addr2[2],
 		hdr->addr2[3],hdr->addr2[4],hdr->addr2[5],	
 		ppkt->rx_ctrl.rssi,
 		logger_mac_addr[0],logger_mac_addr[1],logger_mac_addr[2],
 		logger_mac_addr[3],logger_mac_addr[4],logger_mac_addr[5]
-	);;
+		);
+	}
 }
 
 /*
