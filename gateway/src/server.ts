@@ -8,6 +8,7 @@ import { ZonesRoute } from "./routes/zones";
 import { SensorsRoute } from "./routes/sensors";
 import { ServiceFactory } from "./services/service-factory";
 import { ServiceDiscovery } from "./utils/service-discovery";
+import { SocketHandler } from "./push/socket-handler";
 
 /**
  * The server.
@@ -17,6 +18,7 @@ import { ServiceDiscovery } from "./utils/service-discovery";
 export class Server {
   public app: express.Application;
   private serviceFactory: ServiceFactory;
+  private socketServer: SocketIO.Server;
 
   /**
    * Bootstrap the application.
@@ -45,6 +47,11 @@ export class Server {
 
     // add routes
     this.routes();
+  }
+  
+  public setSocketServer(socketServer: SocketIO.Server): void {
+    this.socketServer = socketServer;
+    this.socketServer.on("connection", socket => SocketHandler.onConnection(socket));
   }
 
   /**
@@ -89,6 +96,9 @@ export class Server {
 
     // set up service factory
     this.serviceFactory = new ServiceFactory(discovery);
+
+    // init socket handler
+    SocketHandler.initialize();
   }
 
   /**

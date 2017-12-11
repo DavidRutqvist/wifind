@@ -12,6 +12,8 @@ var _server = server.Server.bootstrap();
 var app = _server.app;
 app.set("port", httpPort);
 var httpServer = http.createServer(app);
+var io = require("socket.io")(httpServer);
+_server.setSocketServer(io);
 
 //listen on provided ports
 httpServer.listen(httpPort);
