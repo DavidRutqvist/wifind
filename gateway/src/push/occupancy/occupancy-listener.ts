@@ -20,7 +20,7 @@ export class OccupancyListener extends AmqpTopicListener {
 
       if (connections) {
         for (let i = 0; i < connections.length; i++) {
-          (<OccupancyConnection>connections[i]).occupancyUpdated(zoneId, data.Occupancy);
+          (<OccupancyConnection>connections[i]).occupancyUpdated(zoneId, data.occupancy);
         }
       }
     }
