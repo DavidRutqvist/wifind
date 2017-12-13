@@ -4,8 +4,8 @@ import { NgModule, ModuleWithProviders } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { RouterModule } from "@angular/router";
-import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
-import { FlexLayoutModule } from '@angular/flex-layout';
+import { NgbModule } from "@ng-bootstrap/ng-bootstrap";
+import { FlexLayoutModule } from "@angular/flex-layout";
 // Angular Material
 // https://material.angular.io/
 import {
@@ -45,7 +45,21 @@ import { MalihuScrollbarModule } from "ngx-malihu-scrollbar";
 // UI Shared Components
 import { FooterComponent } from "../layout/footer/footer.component";
 import { AppBackdropComponent } from "./components/app_backdrop/app_backdrop.component";
-import { ZoneBadgeComponent } from './components/zone-badge/zone-badge.component';
+import { ZoneBadgeComponent } from "./components/zone-badge/zone-badge.component";
+import { RealtimeGraphComponent } from "./components/realtime-graph/realtime-graph.component";
+
+
+// this is a workaround for a known issue of highcharts with Angular (4?)
+export declare var require: any;
+export function highchartsFactory() {
+  const hc = require("highcharts");
+  const dd = require("highcharts/modules/drilldown");
+  dd(hc);
+
+  return hc;
+}
+import { ChartModule } from "angular2-highcharts";
+import { HighchartsStatic } from "angular2-highcharts/dist/HighchartsService";
 
 @NgModule({
 	imports: [
@@ -84,12 +98,20 @@ import { ZoneBadgeComponent } from './components/zone-badge/zone-badge.component
 		NgbModule.forRoot(),
 		MalihuScrollbarModule.forRoot(),
 		FlexLayoutModule,
-		RouterModule
+		RouterModule,
+		ChartModule
+	],
+	providers: [
+		{
+			provide: HighchartsStatic,
+			useFactory: highchartsFactory
+		}
 	],
 	declarations: [
 		AppBackdropComponent,
 		FooterComponent,
-		ZoneBadgeComponent
+		ZoneBadgeComponent,
+		RealtimeGraphComponent
 	],
 	exports: [
 		CommonModule,
@@ -129,7 +151,9 @@ import { ZoneBadgeComponent } from './components/zone-badge/zone-badge.component
 		MalihuScrollbarModule,
 		NgbModule,
 		FlexLayoutModule,
-		ZoneBadgeComponent
+		ZoneBadgeComponent,
+		RealtimeGraphComponent,
+		ChartModule
 	]
 })
 export class SharedModule {

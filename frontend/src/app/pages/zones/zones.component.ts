@@ -27,6 +27,7 @@ export class ZonesComponent implements OnInit, OnDestroy {
   }
 
   initZone() {
+    this.zone = undefined;
     this.zoneSvc.getZone(this.id)
       .subscribe(zone => this.zone = zone);
   }
