@@ -20,7 +20,7 @@ job "app" {
       driver = "docker"
 
       config {
-        image = "docker.adventic.se/wifind/app:0.0.4"
+        image = "docker.adventic.se/wifind/app:1.0.0"
 
         port_map {
           http = 80
