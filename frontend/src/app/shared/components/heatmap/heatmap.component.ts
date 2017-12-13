@@ -54,7 +54,8 @@ export class HeatmapComponent implements OnInit {
     this.heatmap = new google.maps.visualization.HeatmapLayer({
       data: this.getPoints(),
       map: this.map,
-      radius: 75
+      radius: 75,
+      maxIntensity: 200
     });
   }
 
@@ -70,7 +71,7 @@ export class HeatmapComponent implements OnInit {
     for (let i = 0; i < this.zones.length; i++) {
         points.push({
           location: new google.maps.LatLng(this.zones[i].location[0], this.zones[i].location[1]),
-          weight: 10 * this.occupancyMap[this.zones[i].id]
+          weight: this.occupancyMap[this.zones[i].id]
         });
     }
 
