@@ -44,7 +44,7 @@ export class RealtimeGraphComponent implements OnInit {
   ngOnInit() {
     this.options.chart.height = this.height;
     this.zoneSvc.getRealtimeOccupancy([this.zoneId])
-      .subscribe(occupancy => this.updateOccupancy(occupancy));
+      .subscribe(zoneOccupancy => this.updateOccupancy(zoneOccupancy.occupancy));
     Rx.Observable.timer(0, 30000) // check every 30 seconds
       .subscribe(() => this.removeOldSamples());
   }

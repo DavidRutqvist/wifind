@@ -3,6 +3,7 @@ import * as Rx from "rxjs/Rx";
 import { ConfigService } from "app/shared/services/config/config.service";
 import { Zone } from "app/shared/services/zones/zone";
 import * as io from "socket.io-client";
+import { ZoneOccupancy } from "app/shared/services/zones/zone-occupancy";
 
 @Injectable()
 export class ZonesService {
@@ -41,14 +42,13 @@ export class ZonesService {
       .toArray();
   }
 
-  public getRealtimeOccupancy(zoneIds: string[]): Rx.Observable<number> {
+  public getRealtimeOccupancy(zoneIds: string[]): Rx.Observable<ZoneOccupancy> {
     return new Rx.Observable(observer => {
       const socket = io(this.config.getSocketURL() + "/occupancy?prenumerations=" + zoneIds.join(","));
-      console.log(this.config.getSocketURL() + "/occupancy?prenumerations=" + zoneIds.join(","));
 
       socket.on("OCCUPANCY_CHANGED", (content) => {
         const zoneOccupancy = JSON.parse(content);
-        observer.next(zoneOccupancy.occupancy);
+        observer.next(zoneOccupancy);
       });
 
       return () => {
@@ -100,10 +100,14 @@ export class ZonesService {
 
   private appendImage(zone: Zone): Zone {
     // Just for proof-of-concept
-    if (zone.name === "A-huset") {
+    if (zone.name === "LTU, Building A") {
       zone.image = "/assets/img/headers/ltu-a.jpg";
-    } else if (zone.name === "D-huset") {
+    } else if (zone.name === "LTU, Building B") {
+      zone.image = "/assets/img/headers/ltu-b.jpg";
+    } else if (zone.name === "LTU, Buildiang D") {
       zone.image = "/assets/img/headers/ltu-d.jpg";
+    } else if (zone.name === "LTU, Building C") {
+      zone.image = "/assets/img/headers/ltu-c.jpg";
     }
 
     return zone;

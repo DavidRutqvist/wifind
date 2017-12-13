@@ -1,11 +1,11 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { ZonesService } from 'app/shared/services/zones/zones.service';
-import { Zone } from 'app/shared/services/zones/zone';
+import { Component, OnInit, Input } from "@angular/core";
+import { ZonesService } from "app/shared/services/zones/zones.service";
+import { Zone } from "app/shared/services/zones/zone";
 
 @Component({
-  selector: 'app-zone-badge',
-  templateUrl: './zone-badge.component.html',
-  styleUrls: ['./zone-badge.component.scss']
+  selector: "app-zone-badge",
+  templateUrl: "./zone-badge.component.html",
+  styleUrls: ["./zone-badge.component.scss"]
 })
 export class ZoneBadgeComponent implements OnInit {
   @Input() zone: Zone;
@@ -16,7 +16,7 @@ export class ZoneBadgeComponent implements OnInit {
 
   ngOnInit() {
     this.zoneSvc.getRealtimeOccupancy([this.zone.id])
-      .subscribe(occupancy => this.occupancyChanged(occupancy));
+      .subscribe(zoneOccupancy => this.occupancyChanged(zoneOccupancy.occupancy));
   }
 
   private occupancyChanged(occupancy: number): void {

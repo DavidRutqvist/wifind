@@ -15,6 +15,11 @@
 					<app-zone-badge [zone]="zone"></app-zone-badge>
 				</div>
 			</div>
+			<div class="row" *ngIf="zones">
+				<div class="col-lg-12">
+					<app-heatmap [zones]="zones"></app-heatmap>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>
