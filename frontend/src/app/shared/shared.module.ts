@@ -48,8 +48,6 @@ import { AppBackdropComponent } from "./components/app_backdrop/app_backdrop.com
 import { ZoneBadgeComponent } from "./components/zone-badge/zone-badge.component";
 import { RealtimeGraphComponent } from "./components/realtime-graph/realtime-graph.component";
 
-import { AgmCoreModule } from "@agm/core";
-
 // this is a workaround for a known issue of highcharts with Angular (4?)
 export declare var require: any;
 export function highchartsFactory() {
@@ -61,7 +59,7 @@ export function highchartsFactory() {
 }
 import { ChartModule } from "angular2-highcharts";
 import { HighchartsStatic } from "angular2-highcharts/dist/HighchartsService";
-import { HeatmapComponent } from './components/heatmap/heatmap.component';
+import { HeatmapComponent } from "./components/heatmap/heatmap.component";
 
 @NgModule({
 	imports: [
@@ -101,10 +99,7 @@ import { HeatmapComponent } from './components/heatmap/heatmap.component';
 		MalihuScrollbarModule.forRoot(),
 		FlexLayoutModule,
 		RouterModule,
-		ChartModule,
-		AgmCoreModule.forRoot({
-			apiKey: "AIzaSyAiR3lAKuIZp6LFWcDnpNB6w7hkPOrb28E"
-		})
+		ChartModule
 	],
 	providers: [
 		{
@@ -160,7 +155,6 @@ import { HeatmapComponent } from './components/heatmap/heatmap.component';
 		ZoneBadgeComponent,
 		RealtimeGraphComponent,
 		ChartModule,
-		AgmCoreModule,
 		HeatmapComponent
 	]
 })

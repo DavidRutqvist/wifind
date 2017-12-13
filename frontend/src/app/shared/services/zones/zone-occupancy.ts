@@ -2,5 +2,5 @@
 
 export interface ZoneOccupancy {
   occupancy: number,
-  zoneId: string
+  zone: string
 }

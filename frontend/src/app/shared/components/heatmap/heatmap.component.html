@@ -3,8 +3,6 @@
     <h2 class="card-title">Realtime Occupancy Heatmap</h2>
   </header>
   <div class="card-block">
-    <agm-map [latitude]="65.618035" [longitude]="22.138819" [zoom]="16" *ngIf="zones">
-      <agm-marker *ngFor="let zone of zones" [latitude]="zone.location[0]" [longitude]="zone.location[1]"></agm-marker>
-    </agm-map>
+    <div class="map" #map></div>
   </div>
 </div>
