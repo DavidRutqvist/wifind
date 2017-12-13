@@ -1,13 +1,11 @@
 <div class="card type--profile">
-  <header class="card-header card-background" [ngStyle]="{background: 'url(' + zone.image + ')'}">
-  </header>
-
-  <div class="card-block">
-    <h3 class="name">{{ zone.name }}</h3>
-
-  </div>
-
-	<footer class="card-footer border-top m-t-50">
+  <a [routerLink]="['/zones/' + zone.id]"
+    href="javascript:void(0)"
+    class="card-header card-image card-background"
+    [ngStyle]="{background: 'url(' + zone.image + ')'}" md-ripple>
+    <h2 class="card-title left-bottom overlay text-white">{{ zone.name }}</h2>
+  </a>
+	<footer class="card-footer border-top">
     <div class="row p-t-10 p-b-10">
       <div class="col"><span class="count">{{ occupancy }}</span><span>Occupancy</span></div>
     </div>

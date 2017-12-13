@@ -83,7 +83,8 @@ import { ZoneBadgeComponent } from './components/zone-badge/zone-badge.component
 		NguUtilityModule,
 		NgbModule.forRoot(),
 		MalihuScrollbarModule.forRoot(),
-		FlexLayoutModule
+		FlexLayoutModule,
+		RouterModule
 	],
 	declarations: [
 		AppBackdropComponent,
