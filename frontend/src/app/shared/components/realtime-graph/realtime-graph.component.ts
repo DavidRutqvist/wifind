@@ -64,7 +64,7 @@ export class RealtimeGraphComponent implements OnInit {
     }
   }
 
-  private saveInstance(chart: any) {
+  saveInstance(chart: any) {
     this.chart = chart;
   }
 }
