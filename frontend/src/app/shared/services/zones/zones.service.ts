@@ -2,6 +2,8 @@ import { Injectable } from "@angular/core";
 import * as Rx from "rxjs/Rx";
 import { ConfigService } from "app/shared/services/config/config.service";
 import { Zone } from "app/shared/services/zones/zone";
+import * as io from "socket.io-client";
+import { ZoneOccupancy } from "app/shared/services/zones/zone-occupancy";
 
 @Injectable()
 export class ZonesService {
@@ -27,7 +29,8 @@ export class ZonesService {
   public getZone(zoneId: string): Rx.Observable<Zone> {
     return Rx.Observable.fromPromise(this.config.getApiClient().get("/zones/" + zoneId))
       .map(res => res.data)
-      .map(data => data.zone);
+      .map(data => data.zone)
+      .map(zone => this.appendImage(zone));
   }
 
   public getAllZones(): Rx.Observable<Zone[]> {
@@ -35,7 +38,23 @@ export class ZonesService {
       .flatMap(x => x)
       .flatMap(zone => this.getFlattenChildren(zone))
       .flatMap(x => x)
+      .map(zone => this.appendImage(zone))
       .toArray();
+  }
+
+  public getRealtimeOccupancy(zoneIds: string[]): Rx.Observable<ZoneOccupancy> {
+    return new Rx.Observable(observer => {
+      const socket = io(this.config.getSocketURL() + "/occupancy?prenumerations=" + zoneIds.join(","));
+
+      socket.on("OCCUPANCY_CHANGED", (content) => {
+        const zoneOccupancy = JSON.parse(content);
+        observer.next(zoneOccupancy);
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    });
   }
 
   public addSensorToZone(zoneId: string, sensorId: string): Rx.Observable<void> {
@@ -77,6 +96,21 @@ export class ZonesService {
         return Rx.Observable.throw(new Error("Something went wrong"));
       }
     }
+  }
+
+  private appendImage(zone: Zone): Zone {
+    // Just for proof-of-concept
+    if (zone.name === "LTU, Building A") {
+      zone.image = "/assets/img/headers/ltu-a.jpg";
+    } else if (zone.name === "LTU, Building B") {
+      zone.image = "/assets/img/headers/ltu-b.jpg";
+    } else if (zone.name === "LTU, Buildiang D") {
+      zone.image = "/assets/img/headers/ltu-d.jpg";
+    } else if (zone.name === "LTU, Building C") {
+      zone.image = "/assets/img/headers/ltu-c.jpg";
+    }
+
+    return zone;
   }
 
   private noop(): void { }

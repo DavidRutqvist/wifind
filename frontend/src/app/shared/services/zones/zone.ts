@@ -5,4 +5,5 @@ export interface Zone {
   name: string;
   location: number[];
   parent?: string;
+  image?: string;
 }

@@ -11,6 +11,9 @@ const LAYOUT_ROUTES: Routes = [
 			}, {
 				path: "management",
 				loadChildren: "../pages/management/management.module#ManagementModule"
+			}, {
+				path: "zones",
+				loadChildren: "../pages/zones/zones.module#ZonesModule"
 			}
 		]
 	},
